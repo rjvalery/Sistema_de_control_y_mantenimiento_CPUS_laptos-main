@@ -1,0 +1,17 @@
+<IfModule mod_rewrite.c>
+    Options +FollowSymlinks
+    RewriteEngine On
+    AcceptPathInfo On
+
+    # Redirigir la raíz a public/index.php
+    RewriteRule ^$ public/index.php [L,QSA]
+
+    # Si el archivo existe en public, servirlo
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
+    RewriteRule ^(.*)$ public/$1 [L]
+
+    # Para cualquier ruta dinámica (/login, /dashboard, etc.), enviar a public/index.php
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/index.php [L,QSA]
+</IfModule>
