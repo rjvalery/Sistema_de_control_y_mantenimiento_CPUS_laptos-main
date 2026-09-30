@@ -36,7 +36,12 @@ class Dashboard extends BaseController
     public function index(): string|ResponseInterface
     {
         $periodo = strtolower(trim((string)($this->request->getGet('periodo') ?? 'todos')));
-        $data = $this->obtenerDatosMetricas($periodo);
+        $rawAnalistaId = $this->request->getGet('analista_id');
+        $analistaId = ($rawAnalistaId !== null && $rawAnalistaId !== '' && $rawAnalistaId !== 'todos') ? (int) $rawAnalistaId : null;
+        $page = max(1, (int) ($this->request->getGet('page') ?? 1));
+
+        $data = $this->obtenerDatosMetricas($periodo, $analistaId, $page);
+        $data['analistas'] = $this->usuarioModel->where('rol', 'analista')->where('activo', 1)->orderBy('nombre', 'ASC')->findAll();
 
         if ($this->request->isAJAX() || $this->request->getGet('ajax') === '1') {
             return $this->response->setJSON($this->formatearRespuestaJson($data));
@@ -50,12 +55,16 @@ class Dashboard extends BaseController
     }
 
     /**
-     * Endpoint API JSON para actualizar métricas en tiempo real vía AJAX según periodo.
+     * Endpoint API JSON para actualizar métricas en tiempo real vía AJAX según periodo, analista y página.
      */
     public function metricas(): ResponseInterface
     {
         $periodo = strtolower(trim((string)($this->request->getGet('periodo') ?? 'todos')));
-        $data = $this->obtenerDatosMetricas($periodo);
+        $rawAnalistaId = $this->request->getGet('analista_id');
+        $analistaId = ($rawAnalistaId !== null && $rawAnalistaId !== '' && $rawAnalistaId !== 'todos') ? (int) $rawAnalistaId : null;
+        $page = max(1, (int) ($this->request->getGet('page') ?? 1));
+
+        $data = $this->obtenerDatosMetricas($periodo, $analistaId, $page);
 
         return $this->response->setJSON($this->formatearRespuestaJson($data));
     }
@@ -69,6 +78,8 @@ class Dashboard extends BaseController
             'status'               => 'success',
             'periodo'              => $data['periodo'],
             'labelPeriodo'         => $data['labelPeriodo'],
+            'analista_id'          => $data['analista_id'],
+            'nombreAnalista'       => $data['nombreAnalista'],
             'statsInventario'      => $data['statsInventario'],
             'totalIntervenciones'  => $data['totalIntervenciones'],
             'totalEquipos'         => $data['totalEquipos'],
@@ -79,24 +90,37 @@ class Dashboard extends BaseController
             'porcPt'               => $data['porcPt'],
             'totalTraslados'       => $data['totalTraslados'],
             'maquinasIntervenidas' => $data['maquinasIntervenidas'],
+            'total_registros'      => $data['total_registros'],
+            'total_paginas'        => $data['total_paginas'],
+            'pagina_actual'        => $data['pagina_actual'],
+            'limite'               => $data['limite'],
         ];
     }
 
     /**
-     * Calcula los datos consolidados y métricas operativas según el periodo seleccionado.
+     * Calcula los datos consolidados y métricas operativas según el periodo, analista y página seleccionados.
      */
-    private function obtenerDatosMetricas(string $periodo): array
+    private function obtenerDatosMetricas(string $periodo, ?int $analistaId = null, int $page = 1): array
     {
         [$periodo, $fechaDesde, $fechaHasta, $labelPeriodo] = $this->resolverRangoFechas($periodo);
 
-        // 1. Diagnóstico CPU en el periodo
-        $totalEquipos = $this->equipoModel->contarPorRango($fechaDesde, $fechaHasta);
+        // Resolver nombre del analista si se especifica analista_id
+        $nombreAnalista = null;
+        if ($analistaId !== null && $analistaId > 0) {
+            $analistaRow = $this->usuarioModel->find($analistaId);
+            if ($analistaRow) {
+                $nombreAnalista = (string) ($analistaRow['nombre'] ?? '');
+            }
+        }
 
-        // 2. Mantenimiento Soplado en el periodo
-        $totalSoplado = $this->sopladoModel->contarPorRango($fechaDesde, $fechaHasta);
+        // 1. Diagnóstico CPU en el periodo y analista
+        $totalEquipos = $this->equipoModel->contarPorRango($fechaDesde, $fechaHasta, $nombreAnalista);
 
-        // 3. Garantías Portátiles en el periodo
-        $totalPortatiles = $this->portatilModel->contarPorRango($fechaDesde, $fechaHasta);
+        // 2. Mantenimiento Soplado en el periodo y analista
+        $totalSoplado = $this->sopladoModel->contarPorRango($fechaDesde, $fechaHasta, $nombreAnalista);
+
+        // 3. Garantías Portátiles en el periodo y analista
+        $totalPortatiles = $this->portatilModel->contarPorRango($fechaDesde, $fechaHasta, $nombreAnalista);
 
         // 4. Analistas registrados
         $totalAnalistas = $this->usuarioModel->contarPorRol('analista');
@@ -104,10 +128,10 @@ class Dashboard extends BaseController
         // 5. Total intervenciones consolidadas
         $totalIntervenciones = $totalEquipos + $totalSoplado + $totalPortatiles;
 
-        // 6. Inventario general filtrado por periodo
-        $statsInventario      = $this->inventarioModel->obtenerEstadisticasInventario($fechaDesde, $fechaHasta);
-        $maquinasIntervenidas = $this->inventarioModel->obtenerMaquinasIntervenidasRecientes(8, $fechaDesde, $fechaHasta);
-        $totalTraslados       = $this->inventarioModel->contarTrasladosRegistrados();
+        // 6. Inventario general y tabla paginada de intervenciones
+        $statsInventario = $this->inventarioModel->obtenerEstadisticasInventario($fechaDesde, $fechaHasta, $nombreAnalista);
+        $paginacion      = $this->inventarioModel->obtenerMaquinasIntervenidasPaginadas(10, $page, $fechaDesde, $fechaHasta, $analistaId, $nombreAnalista);
+        $totalTraslados  = $this->inventarioModel->contarTrasladosRegistrados();
 
         // Porcentajes de participación por módulo técnico
         $porcEq = $totalIntervenciones > 0 ? round(($totalEquipos / $totalIntervenciones) * 100, 1) : 0;
@@ -119,6 +143,8 @@ class Dashboard extends BaseController
             'labelPeriodo'         => $labelPeriodo,
             'fechaDesde'           => $fechaDesde,
             'fechaHasta'           => $fechaHasta,
+            'analista_id'          => $analistaId,
+            'nombreAnalista'       => $nombreAnalista,
             'statsInventario'      => $statsInventario,
             'totalIntervenciones'  => $totalIntervenciones,
             'totalEquipos'         => $totalEquipos,
@@ -129,7 +155,11 @@ class Dashboard extends BaseController
             'porcPt'               => $porcPt,
             'totalAnalistas'       => $totalAnalistas,
             'totalTraslados'       => $totalTraslados,
-            'maquinasIntervenidas' => $maquinasIntervenidas,
+            'maquinasIntervenidas' => $paginacion['data'],
+            'total_registros'      => $paginacion['total_registros'],
+            'total_paginas'        => $paginacion['total_paginas'],
+            'pagina_actual'        => $paginacion['pagina_actual'],
+            'limite'               => $paginacion['limite'],
         ];
     }
 

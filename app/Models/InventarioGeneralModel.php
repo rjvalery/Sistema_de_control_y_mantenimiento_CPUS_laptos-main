@@ -397,12 +397,19 @@ class InventarioGeneralModel extends Model
      * @param string|null $fechaHasta Fecha final en formato Y-m-d H:i:s
      * @return array Resumen estadístico
      */
-    public function obtenerEstadisticasInventario(?string $fechaDesde = null, ?string $fechaHasta = null): array
+    public function obtenerEstadisticasInventario(?string $fechaDesde = null, ?string $fechaHasta = null, ?string $nombreAnalista = null): array
     {
         $this->asegurarTabla();
 
+        $filtroAnalista = ($nombreAnalista !== null && trim($nombreAnalista) !== '') ? trim($nombreAnalista) : null;
+
         if ($fechaDesde === null || $fechaHasta === null) {
-            $row = $this->builder()
+            $builder = $this->builder();
+            if ($filtroAnalista !== null) {
+                $builder->where('analista_intervencion', $filtroAnalista);
+            }
+
+            $row = $builder
                 ->select('COUNT(*) as total_cargados, SUM(CASE WHEN intervenido = 1 THEN 1 ELSE 0 END) as total_intervenidos')
                 ->get()
                 ->getRowArray();
@@ -410,7 +417,7 @@ class InventarioGeneralModel extends Model
             $totalCargados = (int) ($row['total_cargados'] ?? 0);
             $intervenidos  = (int) ($row['total_intervenidos'] ?? 0);
             $pendientes    = max(0, $totalCargados - $intervenidos);
-            $porcentaje    = $totalCargados > 0 ? round(($intervenidos / $totalCargados) * 100, 1) : 0;
+            $porcentaje    = $totalCargados > 0 ? round(($intervenidos / $totalCargados) * 100, 1) : ($intervenidos > 0 ? 100.0 : 0.0);
 
             return [
                 'totalCargados'   => $totalCargados,
@@ -422,21 +429,29 @@ class InventarioGeneralModel extends Model
         }
 
         // Con filtro temporal mediante COUNT directo
-        $rowCargados = $this->builder()
+        $builderCargados = $this->builder()
             ->select('COUNT(*) as cargados')
             ->where('created_at >=', $fechaDesde)
-            ->where('created_at <=', $fechaHasta)
-            ->get()
-            ->getRowArray();
+            ->where('created_at <=', $fechaHasta);
+
+        if ($filtroAnalista !== null) {
+            $builderCargados->where('analista_intervencion', $filtroAnalista);
+        }
+
+        $rowCargados = $builderCargados->get()->getRowArray();
         $cargadosPeriodo = (int) ($rowCargados['cargados'] ?? 0);
 
-        $rowInterv = $this->builder()
+        $builderInterv = $this->builder()
             ->select('COUNT(*) as intervenidos')
             ->where('intervenido', 1)
             ->where('fecha_intervencion >=', $fechaDesde)
-            ->where('fecha_intervencion <=', $fechaHasta)
-            ->get()
-            ->getRowArray();
+            ->where('fecha_intervencion <=', $fechaHasta);
+
+        if ($filtroAnalista !== null) {
+            $builderInterv->where('analista_intervencion', $filtroAnalista);
+        }
+
+        $rowInterv = $builderInterv->get()->getRowArray();
         $intervenidosPeriodo = (int) ($rowInterv['intervenidos'] ?? 0);
 
         $totalCargados = max($cargadosPeriodo, $intervenidosPeriodo);
@@ -742,18 +757,68 @@ class InventarioGeneralModel extends Model
     }
 
     /**
-     * Retorna el listado de las últimas 8 máquinas que han entrado y sido intervenidas en el sistema,
-     * seleccionando únicamente las columnas necesarias para pantalla sin cargar objetos completos en memoria.
+    /**
+     * Obtiene las máquinas intervenidas paginadas con soporte de filtros por fecha y analista técnico.
      *
-     * @param int $limite Cantidad máxima de registros a retornar (estrictamente 8)
+     * @param int $limite Cantidad de registros por página
+     * @param int $pagina Número de página actual (1-indexed)
      * @param string|null $fechaDesde Fecha inicial en formato Y-m-d H:i:s
      * @param string|null $fechaHasta Fecha final en formato Y-m-d H:i:s
-     * @return array<int, array<string, mixed>>
+     * @param int|null $analistaId ID del analista en la tabla usuarios
+     * @param string|null $nombreAnalista Nombre del analista (opcional)
+     * @return array{data: array<int, array<string, mixed>>, total_registros: int, total_paginas: int, pagina_actual: int, limite: int}
      */
-    public function obtenerMaquinasIntervenidasRecientes(int $limite = 8, ?string $fechaDesde = null, ?string $fechaHasta = null): array
-    {
+    public function obtenerMaquinasIntervenidasPaginadas(
+        int $limite = 10,
+        int $pagina = 1,
+        ?string $fechaDesde = null,
+        ?string $fechaHasta = null,
+        ?int $analistaId = null,
+        ?string $nombreAnalista = null
+    ): array {
         $this->asegurarTabla();
 
+        $limite = max(1, $limite);
+        $pagina = max(1, $pagina);
+        $offset = ($pagina - 1) * $limite;
+
+        // Si se provee analistaId pero no nombreAnalista, obtener datos del analista desde usuarios
+        $usuarioAnalista = null;
+        if ($analistaId !== null && $analistaId > 0 && empty($nombreAnalista)) {
+            if ($this->db->tableExists('usuarios')) {
+                $u = $this->db->table('usuarios')->where('id', $analistaId)->get()->getRowArray();
+                if ($u) {
+                    $nombreAnalista = $u['nombre'] ?? null;
+                    $usuarioAnalista = $u['usuario'] ?? null;
+                }
+            }
+        }
+
+        // 1. Conteo total con los mismos filtros
+        $builderCount = $this->builder()->where('intervenido', 1);
+
+        if ($fechaDesde !== null && $fechaHasta !== null) {
+            $builderCount->where('fecha_intervencion >=', $fechaDesde)
+                         ->where('fecha_intervencion <=', $fechaHasta);
+        }
+
+        if ($analistaId !== null && $analistaId > 0) {
+            $builderCount->groupStart();
+            if ($this->db->fieldExists('analista_id', 'inventario_general')) {
+                $builderCount->where('analista_id', $analistaId);
+            }
+            if (!empty($nombreAnalista)) {
+                $builderCount->orWhere('analista_intervencion', $nombreAnalista);
+            }
+            if (!empty($usuarioAnalista)) {
+                $builderCount->orWhere('analista_intervencion', $usuarioAnalista);
+            }
+            $builderCount->groupEnd();
+        }
+
+        $totalRegistros = (int) $builderCount->countAllResults();
+
+        // 2. Consulta de registros paginados
         $builder = $this->builder()
             ->select('id, identificador_1, identificador_2, placa_id, serial, num_traslado, ref_principal, modelo, descripcion, modulo_intervencion, analista_intervencion, fecha_intervencion')
             ->where('intervenido', 1);
@@ -763,35 +828,84 @@ class InventarioGeneralModel extends Model
                     ->where('fecha_intervencion <=', $fechaHasta);
         }
 
+        if ($analistaId !== null && $analistaId > 0) {
+            $builder->groupStart();
+            if ($this->db->fieldExists('analista_id', 'inventario_general')) {
+                $builder->where('analista_id', $analistaId);
+            }
+            if (!empty($nombreAnalista)) {
+                $builder->orWhere('analista_intervencion', $nombreAnalista);
+            }
+            if (!empty($usuarioAnalista)) {
+                $builder->orWhere('analista_intervencion', $usuarioAnalista);
+            }
+            $builder->groupEnd();
+        }
+
         $intervenidas = $builder->orderBy('fecha_intervencion', 'DESC')
             ->orderBy('id', 'DESC')
-            ->limit($limite)
+            ->limit($limite, $offset)
             ->get()
             ->getResultArray();
 
-        if (!empty($intervenidas)) {
-            return $intervenidas;
-        }
+        // 3. Respaldo de visualización si no se ha sincronizado inventario_general
+        if (empty($intervenidas) && $totalRegistros === 0 && $this->db->tableExists('equipos')) {
+            $builderCountEq = $this->db->table('equipos');
+            if ($fechaDesde !== null && $fechaHasta !== null) {
+                $builderCountEq->where('fecha_creacion >=', $fechaDesde)
+                               ->where('fecha_creacion <=', $fechaHasta);
+            }
+            if (!empty($nombreAnalista)) {
+                $builderCountEq->where('nombre_analista', $nombreAnalista);
+            }
+            $totalRegistros = (int) $builderCountEq->countAllResults();
 
-        // Respaldo de visualización si no se ha sincronizado inventario_general
-        if ($this->db->tableExists('equipos')) {
             $builderEq = $this->db->table('equipos')
                 ->select('id, placa_id as identificador_1, serial_disco as identificador_2, num_traslado, nombre_analista as analista_intervencion, fecha_creacion as fecha_intervencion, "Diagnóstico CPU" as modulo_intervencion, tipo_gestion as descripcion, "Intervenido" as estado, 1 as intervenido')
                 ->orderBy('id', 'DESC')
-                ->limit($limite);
+                ->limit($limite, $offset);
 
             if ($fechaDesde !== null && $fechaHasta !== null) {
                 $builderEq->where('fecha_creacion >=', $fechaDesde)
                           ->where('fecha_creacion <=', $fechaHasta);
             }
-
-            $recientesEq = $builderEq->get()->getResultArray();
-            if (!empty($recientesEq)) {
-                return $recientesEq;
+            if (!empty($nombreAnalista)) {
+                $builderEq->where('nombre_analista', $nombreAnalista);
             }
+
+            $intervenidas = $builderEq->get()->getResultArray();
         }
 
-        return [];
+        $totalPaginas = $totalRegistros > 0 ? (int) ceil($totalRegistros / $limite) : 1;
+
+        return [
+            'data'            => $intervenidas,
+            'total_registros' => $totalRegistros,
+            'total_paginas'   => $totalPaginas,
+            'pagina_actual'   => $pagina,
+            'limite'          => $limite,
+        ];
+    }
+
+    /**
+     * Retorna el listado de máquinas intervenidas recientes con soporte opcional de analista.
+     *
+     * @param int $limite Cantidad máxima de registros a retornar
+     * @param string|null $fechaDesde Fecha inicial en formato Y-m-d H:i:s
+     * @param string|null $fechaHasta Fecha final en formato Y-m-d H:i:s
+     * @param int|null $analistaId ID opcional de analista
+     * @param int $pagina Número de página (1-indexed)
+     * @return array<int, array<string, mixed>>
+     */
+    public function obtenerMaquinasIntervenidasRecientes(
+        int $limite = 8, 
+        ?string $fechaDesde = null, 
+        ?string $fechaHasta = null,
+        ?int $analistaId = null,
+        int $pagina = 1
+    ): array {
+        $resultado = $this->obtenerMaquinasIntervenidasPaginadas($limite, $pagina, $fechaDesde, $fechaHasta, $analistaId);
+        return $resultado['data'];
     }
 
     /**

@@ -39,7 +39,7 @@ class EquipoModel extends Model
     /**
      * Cuenta equipos registrados en un rango de fechas.
      */
-    public function contarPorRango(?string $desde = null, ?string $hasta = null): int
+    public function contarPorRango(?string $desde = null, ?string $hasta = null, ?string $analista = null): int
     {
         $builder = $this->builder();
 
@@ -49,6 +49,10 @@ class EquipoModel extends Model
 
         if ($hasta !== null && trim($hasta) !== '') {
             $builder->where('fecha_creacion <=', $hasta);
+        }
+
+        if ($analista !== null && trim($analista) !== '') {
+            $builder->where('nombre_analista', trim($analista));
         }
 
         return (int) $builder->countAllResults();

@@ -27,7 +27,7 @@ class SopladoModel extends Model
     /**
      * Cuenta registros de soplado en un rango de fechas.
      */
-    public function contarPorRango(?string $desde = null, ?string $hasta = null): int
+    public function contarPorRango(?string $desde = null, ?string $hasta = null, ?string $analista = null): int
     {
         $builder = $this->builder();
 
@@ -37,6 +37,10 @@ class SopladoModel extends Model
 
         if ($hasta !== null && trim($hasta) !== '') {
             $builder->where('created_at <=', $hasta);
+        }
+
+        if ($analista !== null && trim($analista) !== '') {
+            $builder->where('nombre_analista', trim($analista));
         }
 
         return (int) $builder->countAllResults();

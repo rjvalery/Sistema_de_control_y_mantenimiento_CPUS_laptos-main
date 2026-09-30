@@ -39,7 +39,7 @@ class PortatilModel extends Model
     /**
      * Cuenta diagnósticos de portátiles en un rango de fechas.
      */
-    public function contarPorRango(?string $desde = null, ?string $hasta = null): int
+    public function contarPorRango(?string $desde = null, ?string $hasta = null, ?string $analista = null): int
     {
         $builder = $this->builder();
 
@@ -49,6 +49,10 @@ class PortatilModel extends Model
 
         if ($hasta !== null && trim($hasta) !== '') {
             $builder->where('created_at <=', $hasta);
+        }
+
+        if ($analista !== null && trim($analista) !== '') {
+            $builder->where('nombre_analista', trim($analista));
         }
 
         return (int) $builder->countAllResults();

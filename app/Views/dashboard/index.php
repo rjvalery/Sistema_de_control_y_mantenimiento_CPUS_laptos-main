@@ -1,37 +1,135 @@
 <?php declare(strict_types=1); ?>
 <?= $this->extend('layouts/main') ?>
 
-<?= $this->section('title') ?>Dashboard Ejecutivo<?= $this->endSection() ?>
+<?= $this->section('title') ?>Dashboard Operativo y Control de Equipos<?= $this->endSection() ?>
+
+<?= $this->section('container_class') ?>container-fluid px-3 px-xl-4<?= $this->endSection() ?>
 
 <?= $this->section('styles') ?>
 <style>
-    .hero-banner {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        border-radius: 16px;
-        color: #ffffff;
+    :root {
+        --pbi-canvas-bg: #f4f6f9;
+        --pbi-card-bg: #ffffff;
+        --pbi-border: #e2e8f0;
+        --pbi-text-main: #1e293b;
+        --pbi-text-muted: #64748b;
+        --pbi-blue: #0078d4;
+        --pbi-cyan: #00bcf2;
+        --pbi-teal: #10b981;
+        --pbi-amber: #f59e0b;
+        --pbi-purple: #7c3aed;
     }
-    .kpi-card {
-        border-radius: 14px;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    body {
+        background-color: var(--pbi-canvas-bg);
+        font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
     }
-    .kpi-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.08) !important;
+
+    /* 1. Cabecera Ejecutiva Canvas */
+    .pbi-canvas-header {
+        background-color: var(--pbi-card-bg);
+        border: 1px solid var(--pbi-border);
+        border-radius: 8px;
+        padding: 0.85rem 1.25rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
     }
-    .kpi-icon {
-        width: 52px;
-        height: 52px;
-        border-radius: 12px;
+    .pbi-canvas-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        color: var(--pbi-text-main);
+        text-transform: uppercase;
+        margin: 0;
+    }
+    .pbi-select-filter {
+        background-color: #f8fafc;
+        border: 1px solid #cbd5e1;
+        font-size: 0.825rem;
+        font-weight: 600;
+        color: #334155;
+        border-radius: 6px;
+        min-width: 170px;
+        cursor: pointer;
+    }
+    .pbi-select-filter:focus {
+        border-color: var(--pbi-blue);
+        box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.15);
+    }
+
+    /* 2. Tarjetas KPI Estilo Power BI Card */
+    .pbi-kpi-card {
+        background-color: var(--pbi-card-bg);
+        border: 1px solid var(--pbi-border);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    .pbi-kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    .pbi-kpi-val {
+        font-size: 1.85rem;
+        font-weight: 700;
+        line-height: 1.1;
+        margin: 0;
+        color: var(--pbi-text-main);
+        letter-spacing: -0.5px;
+    }
+    .pbi-kpi-label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: var(--pbi-text-muted);
+        margin-top: 0.35rem;
+    }
+    .pbi-kpi-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.4rem;
+        font-size: 1.25rem;
+        flex-shrink: 0;
     }
-    .chart-box {
+    .pbi-icon-blue { background-color: #eff6ff; color: #0078d4; }
+    .pbi-icon-teal { background-color: #ecfdf5; color: #10b981; }
+    .pbi-icon-amber { background-color: #fffbeb; color: #f59e0b; }
+    .pbi-icon-purple { background-color: #f5f3ff; color: #7c3aed; }
+
+    /* 3. Widgets Modulares Analíticos */
+    .pbi-widget {
+        background-color: var(--pbi-card-bg);
+        border: 1px solid var(--pbi-border);
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+    .pbi-widget-header {
+        padding: 0.85rem 1.25rem;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .pbi-widget-title {
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: #475569;
+        margin: 0;
+    }
+    .pbi-chart-container {
         position: relative;
-        min-height: 290px;
+        min-height: 250px;
+        max-height: 270px;
     }
-    .chart-center-label {
+    .pbi-donut-center {
         position: absolute;
         top: 50%;
         left: 50%;
@@ -39,303 +137,264 @@
         text-align: center;
         pointer-events: none;
     }
-    .module-item {
-        transition: background 0.15s ease;
-        border-radius: 10px;
+    .pbi-donut-val {
+        font-size: 1.65rem;
+        font-weight: 700;
+        line-height: 1;
+        color: var(--pbi-text-main);
     }
-    .module-item:hover {
+    .pbi-donut-lbl {
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--pbi-text-muted);
+        letter-spacing: 0.4px;
+    }
+
+    /* 4. Tabla Matriz Analítica */
+    .pbi-table {
+        font-size: 0.825rem;
+        margin-bottom: 0;
+    }
+    .pbi-table thead th {
         background-color: #f8fafc;
+        color: #475569;
+        font-size: 0.74rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid var(--pbi-border);
+        padding: 0.65rem 0.85rem;
+        white-space: nowrap;
+    }
+    .pbi-table tbody td {
+        padding: 0.6rem 0.85rem;
+        border-bottom: 1px solid #f1f5f9;
+        color: #334155;
+    }
+    .pbi-table tbody tr:hover td {
+        background-color: #f8fafc;
+    }
+    .pbi-badge {
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 0.25rem 0.55rem;
+        border-radius: 4px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
     }
 </style>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
 
-<!-- 1. HERO BANNER PRINCIPAL (ENCABEZADO EJECUTIVO) -->
-<div class="hero-banner p-4 p-md-4 mb-4 shadow-sm">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+<!-- 1. CABECERA EJECUTIVA (ESTILO CANVAS POWER BI) -->
+<div class="pbi-canvas-header mb-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div class="d-flex align-items-center gap-2">
+        <i class="fa-solid fa-chart-column text-primary fs-5"></i>
         <div>
-            <div class="d-flex align-items-center gap-2 mb-1">
-                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 fw-semibold">
-                    <i class="fa-solid fa-circle-dot me-1"></i> Taller Operativo
+            <h1 class="pbi-canvas-title">DASHBOARD OPERATIVO Y CONTROL DE EQUIPOS</h1>
+            <div class="text-muted d-flex align-items-center gap-2 flex-wrap" style="font-size: 0.74rem;">
+                <span id="labelPeriodoActivo"><i class="fa-regular fa-calendar-check text-primary me-1"></i><?= esc($labelPeriodo) ?></span>
+                <span id="labelAnalistaActivo" class="badge <?= !empty($nombreAnalista) ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'd-none' ?>">
+                    <i class="fa-solid fa-user-check me-1"></i><?= esc((string)($nombreAnalista ?? '')) ?>
                 </span>
-                <span class="badge bg-white bg-opacity-10 text-white rounded-pill px-3 py-1">
-                    <i class="fa-regular fa-calendar me-1"></i> <?= date('d M, Y') ?>
-                </span>
             </div>
-            <h1 class="h3 fw-bold text-white mb-1">
-                Hola, <?= esc(session('usuario_nombre') ?? 'Administrador') ?> 👋
-            </h1>
-            <p class="text-white-50 mb-0 small">
-                Panel de control en tiempo real: flujo de entrada de máquinas, avance de intervenciones y rendimiento del taller.
-            </p>
         </div>
-        <div class="d-flex flex-wrap gap-2">
-            <a href="<?= base_url('inventario') ?>" class="btn btn-primary fw-semibold px-3 py-2 shadow-sm">
-                <i class="fa-solid fa-boxes-stacked me-1"></i> Módulo Inventario
-            </a>
-            <a href="<?= base_url('equipos/formulario') ?>" class="btn btn-outline-light fw-semibold px-3 py-2">
-                <i class="fa-solid fa-plus me-1"></i> Nuevo Diagnóstico
-            </a>
+    </div>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <!-- Slicer 1: Periodo -->
+        <div class="d-flex align-items-center gap-1">
+            <label for="filtroPeriodoSelect" class="small fw-semibold text-secondary mb-0 d-none d-md-inline-flex align-items-center gap-1">
+                <i class="fa-solid fa-calendar-days text-muted"></i>
+            </label>
+            <select id="filtroPeriodoSelect" class="form-select form-select-sm pbi-select-filter" onchange="aplicarFiltros(this.value, null, 1)">
+                <option value="dia" <?= ($periodo === 'dia') ? 'selected' : '' ?>>Hoy</option>
+                <option value="semana" <?= ($periodo === 'semana') ? 'selected' : '' ?>>Esta Semana</option>
+                <option value="mes" <?= ($periodo === 'mes') ? 'selected' : '' ?>>Este Mes</option>
+                <option value="anio" <?= ($periodo === 'anio') ? 'selected' : '' ?>>Este Año</option>
+                <option value="todos" <?= ($periodo === 'todos') ? 'selected' : '' ?>>Histórico Completo</option>
+            </select>
+        </div>
+
+        <!-- Slicer 2: Analista Técnico -->
+        <div class="d-flex align-items-center gap-1">
+            <label for="filtroAnalistaSelect" class="small fw-semibold text-secondary mb-0 d-none d-md-inline-flex align-items-center gap-1">
+                <i class="fa-solid fa-user-gear text-muted"></i>
+            </label>
+            <select id="filtroAnalistaSelect" class="form-select form-select-sm pbi-select-filter" onchange="aplicarFiltros(null, this.value, 1)" style="min-width: 180px;">
+                <option value="todos">Todos los Analistas</option>
+                <?php if (!empty($analistas)): ?>
+                    <?php foreach ($analistas as $a): ?>
+                        <option value="<?= esc((string)$a['id']) ?>" <?= ($analista_id === (int)$a['id']) ? 'selected' : '' ?>>
+                            <?= esc((string)$a['nombre']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </select>
         </div>
     </div>
 </div>
 
-<!-- 2. SELECTOR DE FILTRO TEMPORAL PARA MÉTRICAS (DÍA, SEMANA, MES, AÑO, HISTÓRICO) -->
-<div class="card border-0 shadow-sm mb-4 bg-white" style="border-radius: 14px;">
-    <div class="card-body p-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
-        <div class="d-flex align-items-center gap-2">
-            <span class="p-2 rounded bg-primary-subtle text-primary">
-                <i class="fa-solid fa-filter"></i>
-            </span>
-            <div>
-                <span class="fw-bold text-dark d-block">Filtrar Métricas y Flujo de Máquinas:</span>
-                <small class="text-muted" id="labelPeriodoActivo">
-                    <i class="fa-regular fa-calendar-check text-primary me-1"></i><?= esc($labelPeriodo) ?>
-                </small>
-            </div>
-        </div>
-        <div class="btn-group p-1 bg-light rounded-pill border" role="group" id="grupoFiltroPeriodo">
-            <button type="button" class="btn btn-sm rounded-pill fw-semibold btn-filtro-periodo <?= ($periodo === 'dia') ? 'btn-primary shadow-sm active' : 'btn-light text-secondary' ?>" data-periodo="dia" onclick="filtrarPeriodo('dia')">
-                <i class="fa-solid fa-calendar-day me-1"></i> Hoy (Día)
-            </button>
-            <button type="button" class="btn btn-sm rounded-pill fw-semibold btn-filtro-periodo <?= ($periodo === 'semana') ? 'btn-primary shadow-sm active' : 'btn-light text-secondary' ?>" data-periodo="semana" onclick="filtrarPeriodo('semana')">
-                <i class="fa-solid fa-calendar-week me-1"></i> Esta Semana
-            </button>
-            <button type="button" class="btn btn-sm rounded-pill fw-semibold btn-filtro-periodo <?= ($periodo === 'mes') ? 'btn-primary shadow-sm active' : 'btn-light text-secondary' ?>" data-periodo="mes" onclick="filtrarPeriodo('mes')">
-                <i class="fa-solid fa-calendar me-1"></i> Este Mes
-            </button>
-            <button type="button" class="btn btn-sm rounded-pill fw-semibold btn-filtro-periodo <?= ($periodo === 'anio') ? 'btn-primary shadow-sm active' : 'btn-light text-secondary' ?>" data-periodo="anio" onclick="filtrarPeriodo('anio')">
-                <i class="fa-solid fa-calendar-days me-1"></i> Este Año
-            </button>
-            <button type="button" class="btn btn-sm rounded-pill fw-semibold btn-filtro-periodo <?= ($periodo === 'todos') ? 'btn-primary shadow-sm active' : 'btn-light text-secondary' ?>" data-periodo="todos" onclick="filtrarPeriodo('todos')">
-                <i class="fa-solid fa-clock-rotate-left me-1"></i> Histórico
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- 3. TARJETAS KPI DE ENTRADA, INTERVENCIONES Y STOCK -->
-<div class="row g-3 mb-4">
-    <!-- Card 1: Total Máquinas Ingresadas -->
+<!-- 2. FILA SUPERIOR DE KPIS (TARJETAS ESTILO POWER BI CARD) -->
+<div class="row g-3 mb-3">
+    <!-- KPI 1: Total Máquinas Ingresadas -->
     <div class="col-12 col-sm-6 col-xl-3">
-        <div class="card border-0 shadow-sm h-100 bg-white kpi-card border-start border-primary border-4 p-3">
-            <div class="card-body p-0 d-flex flex-column justify-content-between">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-muted small text-uppercase fw-bold">Máquinas que Entraron</span>
-                    <div class="kpi-icon bg-primary-subtle text-primary">
-                        <i class="fa-solid fa-truck-ramp-box"></i>
-                    </div>
-                </div>
+        <div class="pbi-kpi-card h-100">
+            <div class="d-flex justify-content-between align-items-start">
                 <div>
-                    <h2 class="fw-bold mb-0 text-dark display-6" id="kpiTotalCargados"><?= number_format((int)$statsInventario['totalCargados']) ?></h2>
-                    <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top">
-                        <small class="text-muted" id="kpiLabelCargados">Cargadas en inventario</small>
-                        <span class="badge bg-primary-subtle text-primary fw-bold" id="kpiBadgeTraslados"><?= $totalTraslados ?> Traslados</span>
-                    </div>
+                    <h2 class="pbi-kpi-val" id="kpiTotalCargados"><?= number_format((int)$statsInventario['totalCargados']) ?></h2>
+                    <div class="pbi-kpi-label">Total Máquinas Ingresadas</div>
                 </div>
+                <div class="pbi-kpi-icon pbi-icon-blue">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                </div>
+            </div>
+            <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size: 0.72rem;">
+                <span class="text-muted">Cargadas en inventario</span>
+                <span class="text-primary fw-semibold" id="kpiBadgeTraslados"><?= esc((string)$totalTraslados) ?> Traslados</span>
             </div>
         </div>
     </div>
 
-    <!-- Card 2: Máquinas Intervenidas -->
+    <!-- KPI 2: Máquinas Intervenidas -->
     <div class="col-12 col-sm-6 col-xl-3">
-        <div class="card border-0 shadow-sm h-100 bg-white kpi-card border-start border-success border-4 p-3">
-            <div class="card-body p-0 d-flex flex-column justify-content-between">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-muted small text-uppercase fw-bold">Máquinas Intervenidas</span>
-                    <div class="kpi-icon bg-success-subtle text-success">
-                        <i class="fa-solid fa-circle-check"></i>
-                    </div>
-                </div>
+        <div class="pbi-kpi-card h-100">
+            <div class="d-flex justify-content-between align-items-start">
                 <div>
-                    <h2 class="fw-bold mb-0 text-success display-6" id="kpiIntervenidos">
-                        <?= number_format((int)$statsInventario['intervenidos']) ?>
-                    </h2>
-                    <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top">
-                        <small class="text-muted">Atendidas en el taller</small>
-                        <span class="badge bg-success text-white fw-bold" id="kpiBadgePorcentaje"><?= $statsInventario['porcentaje'] ?>% Listo</span>
-                    </div>
+                    <h2 class="pbi-kpi-val text-success" id="kpiIntervenidos"><?= number_format((int)$statsInventario['intervenidos']) ?></h2>
+                    <div class="pbi-kpi-label">Máquinas Intervenidas</div>
                 </div>
+                <div class="pbi-kpi-icon pbi-icon-teal">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+            </div>
+            <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size: 0.72rem;">
+                <span class="text-muted">Atendidas en taller</span>
+                <span class="text-success fw-semibold" id="kpiPorcentajeIntervenidas"><?= esc((string)$statsInventario['porcentaje']) ?>% Atendido</span>
             </div>
         </div>
     </div>
 
-    <!-- Card 3: Pendientes por Intervenir -->
+    <!-- KPI 3: Pendientes por Intervenir -->
     <div class="col-12 col-sm-6 col-xl-3">
-        <div class="card border-0 shadow-sm h-100 bg-white kpi-card border-start border-warning border-4 p-3">
-            <div class="card-body p-0 d-flex flex-column justify-content-between">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-muted small text-uppercase fw-bold">Pendientes por Intervenir</span>
-                    <div class="kpi-icon bg-warning-subtle text-warning">
-                        <i class="fa-solid fa-hourglass-half"></i>
-                    </div>
-                </div>
+        <div class="pbi-kpi-card h-100">
+            <div class="d-flex justify-content-between align-items-start">
                 <div>
-                    <h2 class="fw-bold mb-0 text-dark display-6" id="kpiPendientes"><?= number_format((int)$statsInventario['pendientes']) ?></h2>
-                    <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top">
-                        <small class="text-muted">En cola de trabajo</small>
-                        <span class="badge bg-warning-subtle text-dark border border-warning-subtle fw-semibold">Por Atender</span>
-                    </div>
+                    <h2 class="pbi-kpi-val text-warning-emphasis" id="kpiPendientes"><?= number_format((int)$statsInventario['pendientes']) ?></h2>
+                    <div class="pbi-kpi-label">Pendientes por Intervenir</div>
                 </div>
+                <div class="pbi-kpi-icon pbi-icon-amber">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+            </div>
+            <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size: 0.72rem;">
+                <span class="text-muted">En cola de taller</span>
+                <span class="text-warning-emphasis fw-semibold" id="kpiBadgePendientes">Por Atender</span>
             </div>
         </div>
     </div>
 
-    <!-- Card 4: Total Intervenciones Globales en Taller -->
+    <!-- KPI 4: Total Intervenciones Taller -->
     <div class="col-12 col-sm-6 col-xl-3">
-        <div class="card border-0 shadow-sm h-100 bg-white kpi-card border-start border-info border-4 p-3">
-            <div class="card-body p-0 d-flex flex-column justify-content-between">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="text-muted small text-uppercase fw-bold">Intervenciones Taller</span>
-                    <div class="kpi-icon bg-info-subtle text-info">
-                        <i class="fa-solid fa-screwdriver-wrench"></i>
-                    </div>
-                </div>
+        <div class="pbi-kpi-card h-100">
+            <div class="d-flex justify-content-between align-items-start">
                 <div>
-                    <h2 class="fw-bold mb-0 text-dark display-6" id="kpiTotalIntervenciones"><?= number_format((int)$totalIntervenciones) ?></h2>
-                    <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top">
-                        <small class="text-muted">Total registros en bitácoras</small>
-                        <span class="badge bg-info-subtle text-info fw-bold">Activo</span>
-                    </div>
+                    <h2 class="pbi-kpi-val" style="color: var(--pbi-purple);" id="kpiTotalIntervenciones"><?= number_format((int)$totalIntervenciones) ?></h2>
+                    <div class="pbi-kpi-label">Total Intervenciones Taller</div>
                 </div>
+                <div class="pbi-kpi-icon pbi-icon-purple">
+                    <i class="fa-solid fa-screwdriver-wrench"></i>
+                </div>
+            </div>
+            <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center" style="font-size: 0.72rem;">
+                <span class="text-muted">Total registros en bitácoras</span>
+                <span class="text-muted fw-semibold" id="kpiBadgeAnalistas"><?= number_format((int)$totalAnalistas) ?> Analistas</span>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 3. SECCIÓN VISUAL: TORTA COLORIDA Y RENDIMIENTO POR MÓDULOS -->
-<div class="row g-4 mb-4">
-    <!-- COLUMNA IZQUIERDA: GRÁFICO DE TORTA COLORIDO -->
+<!-- 3. DISTRIBUCIÓN GRÁFICA Y ANALÍTICA CENTRAL -->
+<div class="row g-3 mb-3">
+    <!-- GRÁFICO 1: DISTRIBUCIÓN DE TRABAJO POR LÍNEA TÉCNICA -->
     <div class="col-12 col-lg-7">
-        <div class="card border-0 shadow-sm h-100 bg-white" style="border-radius: 14px;">
-            <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div class="pbi-widget h-100 d-flex flex-column justify-content-between">
+            <div class="pbi-widget-header">
                 <div>
-                    <h5 class="card-title fw-bold mb-0 text-dark">
-                        <i class="fa-solid fa-chart-pie text-primary me-2"></i>Métricas Visuales de Taller
-                    </h5>
-                    <small class="text-muted">Proporción gráfica de máquinas ingresadas, intervenidas y áreas técnicas.</small>
+                    <h2 class="pbi-widget-title">Distribución de Trabajo por Línea Técnica</h2>
+                    <div class="text-muted" style="font-size: 0.72rem;">Diagnóstico CPU, Mantenimiento Soplado y Garantías Portátiles</div>
                 </div>
-                <!-- BOTONES SWITCH PARA CAMBIAR VISTA DE LA TORTA -->
-                <div class="btn-group btn-group-sm" role="group">
-                    <button type="button" class="btn btn-primary fw-semibold" id="btnChartFlujo" onclick="cambiarVistaGrafico('flujo')">
-                        <i class="fa-solid fa-sliders me-1"></i> Flujo Entrada
-                    </button>
-                    <button type="button" class="btn btn-outline-primary fw-semibold" id="btnChartModulos" onclick="cambiarVistaGrafico('modulos')">
-                        <i class="fa-solid fa-layer-group me-1"></i> Por Módulo
-                    </button>
-                </div>
+                <span class="badge bg-light text-secondary border fw-semibold" style="font-size: 0.72rem;" id="badgeTotalIntervencionesGrafico">
+                    <?= number_format((int)$totalIntervenciones) ?> Registros
+                </span>
             </div>
             
-            <div class="card-body p-4 d-flex flex-column justify-content-between">
-                <!-- CONTENEDOR DEL CANVAS CON ETIQUETA CENTRAL -->
-                <div class="chart-box d-flex align-items-center justify-content-center my-2">
-                    <canvas id="chartTortaColorida" style="max-height: 270px;"></canvas>
-                    <div class="chart-center-label" id="centerLabelBox">
-                        <div class="display-6 fw-bold text-dark mb-0" id="centerLabelValor"><?= $statsInventario['porcentaje'] ?>%</div>
-                        <small class="text-muted fw-semibold" id="centerLabelTexto">Intervenido</small>
-                    </div>
+            <div class="p-3 flex-grow-1 d-flex flex-column justify-content-between">
+                <div class="pbi-chart-container" style="min-height: 220px; max-height: 240px;">
+                    <canvas id="chartLineasTecnicas"></canvas>
                 </div>
-
-                <!-- LEYENDA COLORIDA DINÁMICA DEBAJO DEL GRÁFICO -->
-                <div class="d-flex flex-wrap justify-content-center align-items-center gap-3 mt-3 pt-3 border-top" id="contenedorLeyenda">
-                    <!-- Generado dinámicamente por JavaScript -->
+                
+                <!-- Micro-métricas de soporte estilo Power BI -->
+                <div class="row g-2 pt-2 mt-2 border-top text-center" style="font-size: 0.75rem;">
+                    <div class="col-4">
+                        <span class="text-muted d-block" style="font-size: 0.7rem;">DIAGNÓSTICO CPU</span>
+                        <strong class="text-primary" id="metricEqVal"><?= number_format((int)$totalEquipos) ?></strong>
+                        <span class="text-muted ms-1" style="font-size: 0.68rem;" id="metricEqPct">(<?= $porcEq ?>%)</span>
+                    </div>
+                    <div class="col-4 border-start border-end">
+                        <span class="text-muted d-block" style="font-size: 0.7rem;">SOPLADO</span>
+                        <strong style="color: var(--pbi-cyan);" id="metricSpVal"><?= number_format((int)$totalSoplado) ?></strong>
+                        <span class="text-muted ms-1" style="font-size: 0.68rem;" id="metricSpPct">(<?= $porcSp ?>%)</span>
+                    </div>
+                    <div class="col-4">
+                        <span class="text-muted d-block" style="font-size: 0.7rem;">PORTÁTILES</span>
+                        <strong style="color: var(--pbi-purple);" id="metricPtVal"><?= number_format((int)$totalPortatiles) ?></strong>
+                        <span class="text-muted ms-1" style="font-size: 0.68rem;" id="metricPtPct">(<?= $porcPt ?>%)</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- COLUMNA DERECHA: DESGLOSE OPERATIVO POR MÓDULOS -->
+    <!-- GRÁFICO 2: TASA DE CUMPLIMIENTO / EFECTIVIDAD DE INTERVENCIÓN -->
     <div class="col-12 col-lg-5">
-        <div class="card border-0 shadow-sm h-100 bg-white" style="border-radius: 14px;">
-            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <div class="pbi-widget h-100 d-flex flex-column justify-content-between">
+            <div class="pbi-widget-header">
                 <div>
-                    <h5 class="card-title fw-bold mb-0 text-dark">
-                        <i class="fa-solid fa-bars-progress text-info me-2"></i>Distribución de Trabajo
-                    </h5>
-                    <small class="text-muted">Rendimiento por línea técnica y stock.</small>
+                    <h2 class="pbi-widget-title">Tasa de Cumplimiento / Efectividad</h2>
+                    <div class="text-muted" style="font-size: 0.72rem;">Porcentaje atendido vs máquinas restantes en taller</div>
                 </div>
-                <span class="badge bg-light text-muted border px-2 py-1 small">
-                    <?= number_format((int)$totalAnalistas) ?> Analistas
+                <span class="badge bg-success-subtle text-success border border-success-subtle fw-semibold" style="font-size: 0.72rem;" id="badgeTasaCumplimiento">
+                    <?= esc((string)$statsInventario['porcentaje']) ?>% Cumplimiento
                 </span>
             </div>
 
-            <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-around">
-                <!-- 1. Diagnóstico CPU -->
-                <div class="module-item p-2 mb-2">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="p-2 rounded bg-primary-subtle text-primary"><i class="fa-solid fa-desktop"></i></span>
-                            <div>
-                                <span class="fw-bold text-dark d-block">Diagnóstico CPU</span>
-                                <small class="text-muted">Equipos de escritorio</small>
-                            </div>
-                        </div>
-                        <div class="text-end">
-                            <span class="fs-5 fw-bold text-primary" id="modTotalEquipos"><?= number_format((int)$totalEquipos) ?></span>
-                            <small class="text-muted d-block">equipos</small>
-                        </div>
-                    </div>
-                    <div class="progress" style="height: 6px;">
-                        <?php $porcEq = $totalIntervenciones > 0 ? round(($totalEquipos / $totalIntervenciones) * 100, 1) : 0; ?>
-                        <div class="progress-bar bg-primary" id="modBarEquipos" style="width: <?= $porcEq ?>%;"></div>
+            <div class="p-3 flex-grow-1 d-flex flex-column justify-content-between">
+                <!-- Donut con etiqueta central estilo Power BI -->
+                <div class="pbi-chart-container d-flex align-items-center justify-content-center" style="min-height: 200px; max-height: 220px;">
+                    <canvas id="chartCumplimiento" style="max-height: 200px;"></canvas>
+                    <div class="pbi-donut-center">
+                        <div class="pbi-donut-val text-success" id="donutCenterPct"><?= esc((string)$statsInventario['porcentaje']) ?>%</div>
+                        <div class="pbi-donut-lbl">Atendido</div>
                     </div>
                 </div>
 
-                <!-- 2. Soplado de CPUs -->
-                <div class="module-item p-2 mb-2">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="p-2 rounded bg-info-subtle text-info"><i class="fa-solid fa-wind"></i></span>
-                            <div>
-                                <span class="fw-bold text-dark d-block">Mantenimiento Soplado</span>
-                                <small class="text-muted">Limpieza y pasta térmica</small>
-                            </div>
-                        </div>
-                        <div class="text-end">
-                            <span class="fs-5 fw-bold text-info" id="modTotalSoplado"><?= number_format((int)$totalSoplado) ?></span>
-                            <small class="text-muted d-block">servicios</small>
-                        </div>
+                <!-- Resumen analítico inferior -->
+                <div class="pt-2 mt-2 border-top">
+                    <div class="progress mb-2" style="height: 6px; border-radius: 4px; background-color: #f1f5f9;">
+                        <div class="progress-bar bg-success" id="progresoCumplimientoBar" style="width: <?= (float)$statsInventario['porcentaje'] ?>%;"></div>
                     </div>
-                    <div class="progress" style="height: 6px;">
-                        <?php $porcSp = $totalIntervenciones > 0 ? round(($totalSoplado / $totalIntervenciones) * 100, 1) : 0; ?>
-                        <div class="progress-bar bg-info" id="modBarSoplado" style="width: <?= $porcSp ?>%;"></div>
-                    </div>
-                </div>
-
-                <!-- 3. Portátiles -->
-                <div class="module-item p-2 mb-2">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="p-2 rounded bg-purple-subtle text-purple" style="background-color: #f3e8ff; color: #7e22ce;"><i class="fa-solid fa-laptop"></i></span>
-                            <div>
-                                <span class="fw-bold text-dark d-block">Garantías Portátiles</span>
-                                <small class="text-muted">Laptops Lenovo / FRU</small>
-                            </div>
-                        </div>
-                        <div class="text-end">
-                            <span class="fs-5 fw-bold" style="color: #7e22ce;" id="modTotalPortatiles"><?= number_format((int)$totalPortatiles) ?></span>
-                            <small class="text-muted d-block">laptops</small>
-                        </div>
-                    </div>
-                    <div class="progress" style="height: 6px;">
-                        <?php $porcPt = $totalIntervenciones > 0 ? round(($totalPortatiles / $totalIntervenciones) * 100, 1) : 0; ?>
-                        <div class="progress-bar" id="modBarPortatiles" style="background-color: #8b5cf6; width: <?= $porcPt ?>%;"></div>
-                    </div>
-                </div>
-
-                <!-- 4. Barra consolidada de stock de inventario -->
-                <div class="p-3 bg-light rounded-3 mt-1 border">
-                    <div class="d-flex justify-content-between align-items-center small mb-1">
-                        <span class="fw-bold text-dark">Efectividad de Intervención:</span>
-                        <span class="fw-bold text-success" id="modEfectividadPct"><?= $statsInventario['porcentaje'] ?>% Atendido</span>
-                    </div>
-                    <div class="progress" style="height: 10px; border-radius: 6px;">
-                        <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" id="modEfectividadBar" style="width: <?= (float)$statsInventario['porcentaje'] ?>%;"></div>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mt-2 small text-muted">
-                        <span id="modEfectividadIntervenidos"><i class="fa-solid fa-circle text-success me-1"></i><?= number_format((int)$statsInventario['intervenidos']) ?> Intervenidas</span>
-                        <span id="modEfectividadPendientes"><i class="fa-solid fa-circle text-warning me-1"></i><?= number_format((int)$statsInventario['pendientes']) ?> Restantes</span>
+                    <div class="d-flex justify-content-between align-items-center" style="font-size: 0.75rem;">
+                        <span class="text-muted">
+                            <i class="fa-solid fa-circle text-success me-1" style="font-size: 0.6rem;"></i>
+                            Intervenidas: <strong class="text-dark" id="txtIntervenidasMini"><?= number_format((int)$statsInventario['intervenidos']) ?></strong>
+                        </span>
+                        <span class="text-muted">
+                            <i class="fa-solid fa-circle text-warning me-1" style="font-size: 0.6rem;"></i>
+                            Pendientes: <strong class="text-dark" id="txtPendientesMini"><?= number_format((int)$statsInventario['pendientes']) ?></strong>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -343,300 +402,292 @@
     </div>
 </div>
 
-<!-- 4. TABLA: MÁQUINAS QUE HAN ENTRADO E INTERVENIDO EN EL SISTEMA -->
-<div class="card border-0 shadow-sm mb-4" style="border-radius: 14px;">
-    <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+<!-- 4. TABLA ANALÍTICA INFERIOR (ESTILO MATRIZ DE POWER BI) -->
+<div class="pbi-widget mb-4">
+    <div class="pbi-widget-header">
         <div>
-            <h5 class="card-title fw-bold mb-0 text-dark">
-                <i class="fa-solid fa-microchip text-success me-2"></i>Máquinas que Entraron e Intervenidas en Taller
-            </h5>
-            <small class="text-muted">Flujo más reciente de equipos que ingresaron al inventario y ya recibieron atención técnica.</small>
+            <h2 class="pbi-widget-title">Matriz Analítica de Máquinas Intervenidas</h2>
+            <div class="text-muted" style="font-size: 0.72rem;">Registro cronológico y auditoría técnica de equipos atendidos</div>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <a href="<?= base_url('inventario?filtro=agregados') ?>" class="btn btn-outline-primary btn-sm fw-semibold">
-                <i class="fa-solid fa-boxes-stacked me-1"></i> Ver Todas en Inventario
-            </a>
-            <a href="<?= base_url('inventario/sincronizar') ?>" class="btn btn-primary btn-sm fw-semibold shadow-sm" title="Sincronizar y actualizar estado de máquinas">
-                <i class="fa-solid fa-arrows-rotate me-1"></i> Sincronizar Mapeo
-            </a>
+        <div class="text-muted" style="font-size: 0.75rem;">
+            Total: <strong id="tablaCountBadge" class="text-dark"><?= (int)($total_registros ?? count($maquinasIntervenidas)) ?></strong> máquinas intervenidas
         </div>
     </div>
 
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0 text-nowrap">
-                <thead class="table-dark">
-                    <tr>
-                        <th class="ps-3">ID</th>
-                        <th style="min-width: 140px;">Equipo / Serial</th>
-                        <th>Traslado</th>
-                        <th>Modelo / Descripción</th>
-                        <th>Módulo de Intervención</th>
-                        <th>Analista Técnico</th>
-                        <th>Fecha Intervención</th>
-                        <th class="text-end pe-3">Estado</th>
-                    </tr>
-                </thead>
-                <tbody id="tbodyMaquinasIntervenidas">
-                    <?php if (!empty($maquinasIntervenidas)): ?>
-                        <?php foreach ($maquinasIntervenidas as $m): ?>
-                            <tr>
-                                <td class="ps-3 text-muted"><?= esc((string)$m['id']) ?></td>
-                                <td>
-                                    <div class="fw-bold text-dark font-monospace">
-                                        <?= esc((string)($m['identificador_1'] ?: ($m['placa_id'] ?? '—'))) ?>
-                                    </div>
-                                    <small class="text-muted font-monospace d-block">
-                                        <i class="fa-solid fa-barcode me-1 text-secondary opacity-75"></i><?= esc((string)($m['identificador_2'] ?: ($m['serial'] ?? '—'))) ?>
-                                    </small>
-                                </td>
-                                <td>
-                                    <?php if (!empty($m['num_traslado'])): ?>
-                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold">
-                                            <i class="fa-solid fa-truck-ramp-box me-1"></i><?= esc((string)$m['num_traslado']) ?>
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="text-muted small">—</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <div class="text-truncate" style="max-width: 180px;" title="<?= esc((string)($m['ref_principal'] ?: ($m['modelo'] ?? ''))) ?>">
-                                        <?= esc((string)($m['ref_principal'] ?: ($m['modelo'] ?? ($m['descripcion'] ?? 'Equipo Taller')))) ?>
-                                    </div>
-                                </td>
-                                <td>
-                                    <?php 
-                                        $mod = strtolower((string)($m['modulo_intervencion'] ?? ''));
-                                        if (str_contains($mod, 'diagn') || str_contains($mod, 'cpu')) {
-                                            $badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
-                                            $icono = 'fa-desktop';
-                                        } elseif (str_contains($mod, 'sopla') || str_contains($mod, 'limpie')) {
-                                            $badgeClass = 'bg-info-subtle text-info border border-info-subtle';
-                                            $icono = 'fa-wind';
-                                        } else {
-                                            $badgeClass = 'bg-success-subtle text-success border border-success-subtle';
-                                            $icono = 'fa-laptop';
-                                        }
-                                    ?>
-                                    <span class="badge <?= $badgeClass ?> fw-semibold px-2 py-1">
-                                        <i class="fa-solid <?= $icono ?> me-1"></i><?= esc((string)($m['modulo_intervencion'] ?: 'Agregado al Sistema')) ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <?php if (!empty($m['analista_intervencion'])): ?>
-                                        <div class="text-truncate text-dark small" style="max-width: 130px;" title="<?= esc((string)$m['analista_intervencion']) ?>">
-                                            <i class="fa-solid fa-user-check text-muted me-1"></i><?= esc((string)$m['analista_intervencion']) ?>
-                                        </div>
-                                    <?php else: ?>
-                                        <span class="text-muted small">—</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="small text-muted">
-                                    <?php if (!empty($m['fecha_intervencion'])): ?>
-                                        <i class="fa-regular fa-clock me-1"></i><?= esc(date('d/m/Y H:i', strtotime((string)$m['fecha_intervencion']))) ?>
-                                    <?php else: ?>
-                                        —
-                                    <?php endif; ?>
-                                </td>
-                                <td class="text-end pe-3">
-                                    <span class="badge bg-success text-white px-2 py-1 fw-semibold">
-                                        <i class="fa-solid fa-check me-1"></i>Intervenido
-                                    </span>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
+    <div class="table-responsive">
+        <table class="table pbi-table align-middle">
+            <thead>
+                <tr>
+                    <th style="width: 70px;">ID</th>
+                    <th style="width: 280px;">Equipo / Serial</th>
+                    <th style="width: 220px;">Módulo</th>
+                    <th style="width: 220px;">Analista</th>
+                    <th style="width: 170px;">Fecha Intervención</th>
+                </tr>
+            </thead>
+            <tbody id="tbodyMatrizOperativa">
+                <?php if (!empty($maquinasIntervenidas)): ?>
+                    <?php foreach ($maquinasIntervenidas as $m): ?>
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-5">
-                                <i class="fa-solid fa-filter-circle-xmark display-6 text-muted mb-3 d-block"></i>
-                                <strong>No hay máquinas intervenidas en este periodo.</strong><br>
-                                <span class="small text-muted">Selecciona otro rango de fechas o consulta el histórico completo.</span>
-                                <div class="mt-3">
-                                    <a href="<?= base_url('inventario') ?>" class="btn btn-sm btn-primary">
-                                        <i class="fa-solid fa-boxes-stacked me-1"></i> Ver Inventario Completo
-                                    </a>
+                            <td class="text-muted font-monospace"><?= esc((string)$m['id']) ?></td>
+                            <td>
+                                <div class="fw-semibold text-dark font-monospace" style="font-size: 0.84rem;">
+                                    <?= esc((string)($m['identificador_1'] ?: ($m['placa_id'] ?? '—'))) ?>
+                                </div>
+                                <div class="text-muted font-monospace" style="font-size: 0.74rem;">
+                                    <i class="fa-solid fa-barcode text-secondary opacity-75 me-1"></i><?= esc((string)($m['identificador_2'] ?: ($m['serial'] ?? '—'))) ?>
                                 </div>
                             </td>
+                            <td>
+                                <?php 
+                                    $mod = strtolower((string)($m['modulo_intervencion'] ?? ''));
+                                    if (str_contains($mod, 'diagn') || str_contains($mod, 'cpu')) {
+                                        $badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
+                                        $icono = 'fa-desktop';
+                                    } elseif (str_contains($mod, 'sopla') || str_contains($mod, 'limpie')) {
+                                        $badgeClass = 'bg-info-subtle text-info border border-info-subtle';
+                                        $icono = 'fa-wind';
+                                    } else {
+                                        $badgeClass = 'bg-purple-subtle text-purple border';
+                                        $icono = 'fa-laptop';
+                                    }
+                                ?>
+                                <span class="pbi-badge <?= $badgeClass ?>" style="<?= str_contains($badgeClass, 'text-purple') ? 'background-color: #f5f3ff; color: #7c3aed; border-color: #ddd6fe !important;' : '' ?>">
+                                    <i class="fa-solid <?= $icono ?>"></i>
+                                    <span><?= esc((string)($m['modulo_intervencion'] ?: 'Diagnóstico')) ?></span>
+                                </span>
+                            </td>
+                            <td>
+                                <?php if (!empty($m['analista_intervencion'])): ?>
+                                    <span class="text-dark">
+                                        <i class="fa-regular fa-user text-muted me-1"></i><?= esc((string)$m['analista_intervencion']) ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="text-muted">—</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-muted">
+                                <?php if (!empty($m['fecha_intervencion'])): ?>
+                                    <i class="fa-regular fa-clock me-1 text-secondary opacity-75"></i><?= esc(date('d/m/Y H:i', strtotime((string)$m['fecha_intervencion']))) ?>
+                                <?php else: ?>
+                                    —
+                                <?php endif; ?>
+                            </td>
                         </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">
+                            <i class="fa-solid fa-filter-circle-xmark fs-4 text-muted mb-2 d-block"></i>
+                            <span class="fw-semibold">No se encontraron máquinas intervenidas para los filtros seleccionados.</span>
+                        </td>
+                    </tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginación compacta estilo Power BI -->
+    <div class="pbi-widget-footer p-2 px-3 bg-light border-top d-flex flex-wrap justify-content-between align-items-center gap-2" style="border-radius: 0 0 8px 8px;">
+        <div class="text-muted small" style="font-size: 0.75rem;">
+            <span id="pagiInfoText">
+                Mostrando página <strong id="pagiCurrentPage"><?= (int)($pagina_actual ?? 1) ?></strong> de <strong id="pagiTotalPages"><?= (int)($total_paginas ?? 1) ?></strong> (<span id="pagiTotalReg"><?= (int)($total_registros ?? count($maquinasIntervenidas)) ?></span> registros)
+            </span>
+        </div>
+        <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-outline-secondary btn-sm px-3" id="btnPagiPrev" onclick="cambiarPagina(paginaActual - 1)" <?= (($pagina_actual ?? 1) <= 1) ? 'disabled' : '' ?>>
+                <i class="fa-solid fa-chevron-left me-1"></i> Anterior
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm px-3" id="btnPagiNext" onclick="cambiarPagina(paginaActual + 1)" <?= (($pagina_actual ?? 1) >= ($total_paginas ?? 1)) ? 'disabled' : '' ?>>
+                Siguiente <i class="fa-solid fa-chevron-right ms-1"></i>
+            </button>
         </div>
     </div>
-
-    <div class="card-footer bg-light py-2 px-3 d-flex flex-wrap justify-content-between align-items-center small text-muted">
-        <span>Mostrando <strong id="footerCountMaquinas"><?= count($maquinasIntervenidas) ?></strong> máquina(s) intervenida(s)</span>
-        <a href="<?= base_url('inventario') ?>" class="text-decoration-none fw-semibold">
-            Gestionar inventario completo &rarr;
-        </a>
-    </div>
 </div>
-
-
 
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<!-- Script de Chart.js para el gráfico de torta colorido y dinámico -->
+<!-- Chart.js 4.4.1 -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
-let chartInstance = null;
-let vistaActual = 'flujo';
+let chartLineas = null;
+let chartCumplimientoInst = null;
 let periodoActual = '<?= esc($periodo) ?>';
+let analistaActual = '<?= esc((string)($analista_id ?? 'todos')) ?>';
+let paginaActual = <?= (int)($pagina_actual ?? 1) ?>;
+let totalPaginas = <?= (int)($total_paginas ?? 1) ?>;
+let totalRegistros = <?= (int)($total_registros ?? count($maquinasIntervenidas)) ?>;
 
-// Datos consolidados desde el backend
-const metricasData = {
-    flujo: {
-        titulo: 'Flujo de Entrada vs Intervenidas',
-        centerValor: '<?= $statsInventario['porcentaje'] ?>%',
-        centerTexto: 'Intervenido',
-        labels: ['Máquinas Intervenidas', 'Pendientes en Espera'],
-        valores: [<?= (int)$statsInventario['intervenidos'] ?>, <?= (int)$statsInventario['pendientes'] ?>],
-        colores: ['#10b981', '#f59e0b'], // Verde esmeralda y Ámbar cálido
-        iconos: ['fa-circle-check', 'fa-clock-rotate-left']
-    },
-    modulos: {
-        titulo: 'Intervenciones por Módulo',
-        centerValor: '<?= number_format((int)$totalIntervenciones) ?>',
-        centerTexto: 'Intervenciones',
+// Configuración inicial de datos analíticos
+const dataAnalytics = {
+    lineas: {
         labels: ['Diagnóstico CPU', 'Mantenimiento Soplado', 'Garantías Portátiles'],
-        valores: [<?= (int)$totalEquipos ?>, <?= (int)$totalSoplado ?>, <?= (int)$totalPortatiles ?>],
-        colores: ['#3b82f6', '#06b6d4', '#8b5cf6'], // Azul eléctrico, Cian y Violeta
-        iconos: ['fa-desktop', 'fa-wind', 'fa-laptop']
+        valores: [<?= (int)$totalEquipos ?>, <?= (int)$totalSoplado ?>, <?= (int)$totalPortatiles ?>]
+    },
+    cumplimiento: {
+        intervenidos: <?= (int)$statsInventario['intervenidos'] ?>,
+        pendientes: <?= (int)$statsInventario['pendientes'] ?>,
+        porcentaje: <?= (float)$statsInventario['porcentaje'] ?>
     }
 };
 
-function renderizarGrafico(tipo) {
-    const config = metricasData[tipo];
-    const ctx = document.getElementById('chartTortaColorida');
+/**
+ * Renderiza el gráfico de barras horizontales de distribución técnica
+ */
+function renderizarGraficoLineas() {
+    const ctx = document.getElementById('chartLineasTecnicas');
     if (!ctx) return;
 
-    // Actualizar texto central
-    document.getElementById('centerLabelValor').textContent = config.centerValor;
-    document.getElementById('centerLabelTexto').textContent = config.centerTexto;
-
-    // Si todos los valores son 0, mostrar una porción visual neutral
-    const sumaValores = config.valores.reduce((a, b) => a + b, 0);
-    const datasetValores = sumaValores > 0 ? config.valores : [1];
-    const datasetColores = sumaValores > 0 ? config.colores : ['#e2e8f0'];
-
-    if (chartInstance) {
-        chartInstance.destroy();
+    if (chartLineas) {
+        chartLineas.destroy();
     }
 
-    chartInstance = new Chart(ctx, {
+    chartLineas = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: dataAnalytics.lineas.labels,
+            datasets: [{
+                label: 'Intervenciones',
+                data: dataAnalytics.lineas.valores,
+                backgroundColor: ['#0078d4', '#00bcf2', '#7c3aed'],
+                borderRadius: 4,
+                borderSkipped: false,
+                barThickness: 22
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1e293b',
+                    titleFont: { size: 12, weight: 'bold' },
+                    bodyFont: { size: 11 },
+                    padding: 10,
+                    cornerRadius: 6,
+                    callbacks: {
+                        label: function(ctx) {
+                            const val = ctx.raw || 0;
+                            const total = dataAnalytics.lineas.valores.reduce((a, b) => a + b, 0);
+                            const pct = total > 0 ? Math.round((val / total) * 100) : 0;
+                            return ` Total: ${val.toLocaleString()} (${pct}%)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: '#f1f5f9',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        font: { size: 11 },
+                        color: '#64748b'
+                    }
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: {
+                        font: { size: 11, weight: '600' },
+                        color: '#334155'
+                    }
+                }
+            },
+            animation: { duration: 500 }
+        }
+    });
+}
+
+/**
+ * Renderiza el Donut minimalista de cumplimiento estilo Power BI
+ */
+function renderizarGraficoCumplimiento() {
+    const ctx = document.getElementById('chartCumplimiento');
+    if (!ctx) return;
+
+    if (chartCumplimientoInst) {
+        chartCumplimientoInst.destroy();
+    }
+
+    const intervenidos = dataAnalytics.cumplimiento.intervenidos;
+    const pendientes = dataAnalytics.cumplimiento.pendientes;
+    const total = intervenidos + pendientes;
+
+    const datasetValues = total > 0 ? [intervenidos, pendientes] : [0, 1];
+    const datasetColors = total > 0 ? ['#10b981', '#f1f5f9'] : ['#e2e8f0', '#f8fafc'];
+
+    chartCumplimientoInst = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: config.labels,
+            labels: ['Intervenidas', 'Pendientes'],
             datasets: [{
-                data: datasetValores,
-                backgroundColor: datasetColores,
-                hoverBackgroundColor: datasetColores,
-                borderWidth: 3,
+                data: datasetValues,
+                backgroundColor: datasetColors,
+                borderWidth: 2,
                 borderColor: '#ffffff',
-                borderRadius: 6,
-                spacing: 3
+                hoverOffset: 2
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '72%',
+            cutout: '78%',
             plugins: {
-                legend: {
-                    display: false // Usamos nuestra leyenda HTML interactiva
-                },
+                legend: { display: false },
                 tooltip: {
-                    enabled: sumaValores > 0,
+                    enabled: total > 0,
                     backgroundColor: '#1e293b',
-                    titleFont: { size: 13, weight: 'bold' },
-                    bodyFont: { size: 12 },
-                    padding: 12,
-                    cornerRadius: 8,
+                    titleFont: { size: 12, weight: 'bold' },
+                    bodyFont: { size: 11 },
+                    padding: 10,
+                    cornerRadius: 6,
                     callbacks: {
-                        label: function(context) {
-                            const val = context.raw || 0;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const porc = total > 0 ? Math.round((val / total) * 100) : 0;
-                            return ` ${context.label}: ${val} (${porc}%)`;
+                        label: function(ctx) {
+                            const val = ctx.raw || 0;
+                            const pct = total > 0 ? Math.round((val / total) * 100) : 0;
+                            return ` ${ctx.label}: ${val.toLocaleString()} (${pct}%)`;
                         }
                     }
                 }
             },
             animation: {
                 animateScale: true,
-                animateRotate: true,
-                duration: 600
+                duration: 500
             }
         }
     });
-
-    // Renderizar leyenda interactiva
-    actualizarLeyenda(config, sumaValores);
 }
 
-function actualizarLeyenda(config, sumaValores) {
-    const contenedor = document.getElementById('contenedorLeyenda');
-    if (!contenedor) return;
-
-    let html = '';
-    config.labels.forEach((label, idx) => {
-        const val = config.valores[idx];
-        const color = config.colores[idx];
-        const icono = config.iconos[idx];
-        const porc = sumaValores > 0 ? Math.round((val / sumaValores) * 100) : 0;
-
-        html += `
-            <div class="d-flex align-items-center gap-2 p-1 px-2 rounded" style="background-color: #f8fafc; border: 1px solid #e2e8f0;">
-                <span class="d-inline-block rounded-circle" style="width: 12px; height: 12px; background-color: ${color};"></span>
-                <span class="small fw-semibold text-dark"><i class="fa-solid ${icono} me-1" style="color: ${color};"></i> ${label}:</span>
-                <span class="badge rounded-pill fw-bold" style="background-color: ${color}20; color: ${color}; border: 1px solid ${color}40;">
-                    ${val.toLocaleString()} (${porc}%)
-                </span>
-            </div>
-        `;
-    });
-
-    contenedor.innerHTML = html;
-}
-
-function cambiarVistaGrafico(tipo) {
-    vistaActual = tipo;
-    const btnFlujo = document.getElementById('btnChartFlujo');
-    const btnModulos = document.getElementById('btnChartModulos');
-
-    if (tipo === 'flujo') {
-        btnFlujo.className = 'btn btn-primary fw-semibold';
-        btnModulos.className = 'btn btn-outline-primary fw-semibold';
-    } else {
-        btnFlujo.className = 'btn btn-outline-primary fw-semibold';
-        btnModulos.className = 'btn btn-primary fw-semibold';
+/**
+ * Filtro Asíncrono de Periodo, Analista y Paginación
+ */
+function aplicarFiltros(nuevoPeriodo = null, nuevoAnalista = null, nuevaPagina = null) {
+    if (nuevoPeriodo !== null) {
+        periodoActual = nuevoPeriodo;
+        paginaActual = 1;
+    }
+    if (nuevoAnalista !== null) {
+        analistaActual = nuevoAnalista;
+        paginaActual = 1;
+    }
+    if (nuevaPagina !== null) {
+        paginaActual = nuevaPagina;
     }
 
-    renderizarGrafico(tipo);
-}
-
-// Función para filtrar asíncronamente por periodo (dia, semana, mes, anio, todos)
-function filtrarPeriodo(periodo) {
-    if (periodo === periodoActual && chartInstance) return;
-
-    // 1. Actualizar apariencia de los botones del grupo
-    document.querySelectorAll('.btn-filtro-periodo').forEach(btn => {
-        if (btn.getAttribute('data-periodo') === periodo) {
-            btn.className = 'btn btn-sm rounded-pill fw-semibold btn-filtro-periodo btn-primary shadow-sm active';
-        } else {
-            btn.className = 'btn btn-sm rounded-pill fw-semibold btn-filtro-periodo btn-light text-secondary';
-        }
-    });
-
-    // 2. Mostrar indicador de carga en la etiqueta de periodo
     const labelPeriodo = document.getElementById('labelPeriodoActivo');
     if (labelPeriodo) {
-        labelPeriodo.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-primary me-1"></i> Cargando métricas...`;
+        labelPeriodo.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-primary me-1"></i> Actualizando métricas...`;
     }
 
-    // 3. Petición AJAX al endpoint de métricas
-    const url = '<?= base_url('dashboard/metricas') ?>?periodo=' + encodeURIComponent(periodo);
+    let url = '<?= base_url('dashboard/metricas') ?>?periodo=' + encodeURIComponent(periodoActual);
+    if (analistaActual && analistaActual !== 'todos') {
+        url += '&analista_id=' + encodeURIComponent(analistaActual);
+    }
+    url += '&page=' + encodeURIComponent(paginaActual);
 
     fetch(url, {
         headers: {
@@ -648,73 +699,113 @@ function filtrarPeriodo(periodo) {
         if (data.status !== 'success') return;
 
         periodoActual = data.periodo;
+        analistaActual = data.analista_id ? String(data.analista_id) : 'todos';
+        paginaActual = data.pagina_actual;
+        totalPaginas = data.total_paginas;
+        totalRegistros = data.total_registros;
 
-        // Actualizar etiqueta del periodo
+        // 1. Etiqueta de periodo activa y analista activo
         if (labelPeriodo) {
             labelPeriodo.innerHTML = `<i class="fa-regular fa-calendar-check text-primary me-1"></i> ${escapeHtml(data.labelPeriodo)}`;
         }
 
-        // Actualizar KPIs superiores
+        const labelAnalista = document.getElementById('labelAnalistaActivo');
+        if (labelAnalista) {
+            if (data.nombreAnalista) {
+                labelAnalista.className = 'badge bg-primary-subtle text-primary border border-primary-subtle';
+                labelAnalista.innerHTML = `<i class="fa-solid fa-user-check me-1"></i>${escapeHtml(data.nombreAnalista)}`;
+            } else {
+                labelAnalista.className = 'd-none';
+                labelAnalista.innerHTML = '';
+            }
+        }
+
+        // Sincronizar selects en UI
+        const selectPeriodo = document.getElementById('filtroPeriodoSelect');
+        if (selectPeriodo && selectPeriodo.value !== periodoActual) {
+            selectPeriodo.value = periodoActual;
+        }
+        const selectAnalista = document.getElementById('filtroAnalistaSelect');
+        if (selectAnalista && selectAnalista.value !== analistaActual) {
+            selectAnalista.value = analistaActual;
+        }
+
+        // 2. Actualizar tarjetas KPI
         const kpiCargados = document.getElementById('kpiTotalCargados');
         if (kpiCargados) kpiCargados.textContent = Number(data.statsInventario.totalCargados).toLocaleString();
 
         const kpiInterv = document.getElementById('kpiIntervenidos');
         if (kpiInterv) kpiInterv.textContent = Number(data.statsInventario.intervenidos).toLocaleString();
 
-        const kpiBadgePct = document.getElementById('kpiBadgePorcentaje');
-        if (kpiBadgePct) kpiBadgePct.textContent = `${data.statsInventario.porcentaje}% Listo`;
+        const kpiPct = document.getElementById('kpiPorcentajeIntervenidas');
+        if (kpiPct) kpiPct.textContent = `${data.statsInventario.porcentaje}% Atendido`;
 
         const kpiPend = document.getElementById('kpiPendientes');
         if (kpiPend) kpiPend.textContent = Number(data.statsInventario.pendientes).toLocaleString();
 
-        const kpiTotInterv = document.getElementById('kpiTotalIntervenciones');
-        if (kpiTotInterv) kpiTotInterv.textContent = Number(data.totalIntervenciones).toLocaleString();
+        const kpiTot = document.getElementById('kpiTotalIntervenciones');
+        if (kpiTot) kpiTot.textContent = Number(data.totalIntervenciones).toLocaleString();
 
-        // Actualizar módulo de Diagnóstico CPU
-        const elTotalEq = document.getElementById('modTotalEquipos');
-        if (elTotalEq) elTotalEq.textContent = Number(data.totalEquipos).toLocaleString();
-        const elBarEq = document.getElementById('modBarEquipos');
-        if (elBarEq) elBarEq.style.width = `${data.porcEq}%`;
+        const badgeGraf = document.getElementById('badgeTotalIntervencionesGrafico');
+        if (badgeGraf) badgeGraf.textContent = `${Number(data.totalIntervenciones).toLocaleString()} Registros`;
 
-        // Actualizar módulo de Soplado
-        const elTotalSp = document.getElementById('modTotalSoplado');
-        if (elTotalSp) elTotalSp.textContent = Number(data.totalSoplado).toLocaleString();
-        const elBarSp = document.getElementById('modBarSoplado');
-        if (elBarSp) elBarSp.style.width = `${data.porcSp}%`;
+        // 3. Actualizar micro-métricas de líneas técnicas
+        const mEq = document.getElementById('metricEqVal');
+        if (mEq) mEq.textContent = Number(data.totalEquipos).toLocaleString();
+        const mEqP = document.getElementById('metricEqPct');
+        if (mEqP) mEqP.textContent = `(${data.porcEq}%)`;
 
-        // Actualizar módulo de Portátiles
-        const elTotalPt = document.getElementById('modTotalPortatiles');
-        if (elTotalPt) elTotalPt.textContent = Number(data.totalPortatiles).toLocaleString();
-        const elBarPt = document.getElementById('modBarPortatiles');
-        if (elBarPt) elBarPt.style.width = `${data.porcPt}%`;
+        const mSp = document.getElementById('metricSpVal');
+        if (mSp) mSp.textContent = Number(data.totalSoplado).toLocaleString();
+        const mSpP = document.getElementById('metricSpPct');
+        if (mSpP) mSpP.textContent = `(${data.porcSp}%)`;
 
-        // Actualizar barra consolidada de efectividad
-        const elEfPct = document.getElementById('modEfectividadPct');
-        if (elEfPct) elEfPct.textContent = `${data.statsInventario.porcentaje}% Atendido`;
-        const elEfBar = document.getElementById('modEfectividadBar');
-        if (elEfBar) elEfBar.style.width = `${data.statsInventario.porcentaje}%`;
+        const mPt = document.getElementById('metricPtVal');
+        if (mPt) mPt.textContent = Number(data.totalPortatiles).toLocaleString();
+        const mPtP = document.getElementById('metricPtPct');
+        if (mPtP) mPtP.textContent = `(${data.porcPt}%)`;
 
-        const elEfInterv = document.getElementById('modEfectividadIntervenidos');
-        if (elEfInterv) elEfInterv.innerHTML = `<i class="fa-solid fa-circle text-success me-1"></i>${Number(data.statsInventario.intervenidos).toLocaleString()} Intervenidas`;
+        // 4. Actualizar gráfico de líneas
+        dataAnalytics.lineas.valores = [data.totalEquipos, data.totalSoplado, data.totalPortatiles];
+        renderizarGraficoLineas();
 
-        const elEfPend = document.getElementById('modEfectividadPendientes');
-        if (elEfPend) elEfPend.innerHTML = `<i class="fa-solid fa-circle text-warning me-1"></i>${Number(data.statsInventario.pendientes).toLocaleString()} Restantes`;
+        // 5. Actualizar gráfico y datos de cumplimiento
+        dataAnalytics.cumplimiento.intervenidos = data.statsInventario.intervenidos;
+        dataAnalytics.cumplimiento.pendientes = data.statsInventario.pendientes;
+        dataAnalytics.cumplimiento.porcentaje = data.statsInventario.porcentaje;
 
-        // Actualizar datos del Gráfico Donut
-        metricasData.flujo.centerValor = `${data.statsInventario.porcentaje}%`;
-        metricasData.flujo.valores = [data.statsInventario.intervenidos, data.statsInventario.pendientes];
+        const donutVal = document.getElementById('donutCenterPct');
+        if (donutVal) donutVal.textContent = `${data.statsInventario.porcentaje}%`;
 
-        metricasData.modulos.centerValor = Number(data.totalIntervenciones).toLocaleString();
-        metricasData.modulos.valores = [data.totalEquipos, data.totalSoplado, data.totalPortatiles];
+        const badgeCumpl = document.getElementById('badgeTasaCumplimiento');
+        if (badgeCumpl) badgeCumpl.textContent = `${data.statsInventario.porcentaje}% Cumplimiento`;
 
-        renderizarGrafico(vistaActual);
+        const progBar = document.getElementById('progresoCumplimientoBar');
+        if (progBar) progBar.style.width = `${data.statsInventario.porcentaje}%`;
 
-        // Actualizar listado de máquinas intervenidas recientes
-        actualizarTablaMaquinas(data.maquinasIntervenidas);
+        const txtIntMini = document.getElementById('txtIntervenidasMini');
+        if (txtIntMini) txtIntMini.textContent = Number(data.statsInventario.intervenidos).toLocaleString();
 
-        // Sincronizar URL en el navegador sin recargar la página
+        const txtPendMini = document.getElementById('txtPendientesMini');
+        if (txtPendMini) txtPendMini.textContent = Number(data.statsInventario.pendientes).toLocaleString();
+
+        renderizarGraficoCumplimiento();
+
+        // 6. Actualizar tabla matriz de máquinas
+        actualizarMatrizMaquinas(data.maquinasIntervenidas);
+
+        // 7. Actualizar controles de paginación
+        actualizarControlesPaginacion(data.pagina_actual, data.total_paginas, data.total_registros);
+
+        // 8. Sincronizar URL en el navegador
         if (window.history && window.history.pushState) {
-            const nuevaUrl = window.location.pathname + '?periodo=' + encodeURIComponent(periodo);
+            let nuevaUrl = window.location.pathname + '?periodo=' + encodeURIComponent(periodoActual);
+            if (analistaActual && analistaActual !== 'todos') {
+                nuevaUrl += '&analista_id=' + encodeURIComponent(analistaActual);
+            }
+            if (paginaActual > 1) {
+                nuevaUrl += '&page=' + encodeURIComponent(paginaActual);
+            }
             window.history.pushState(null, '', nuevaUrl);
         }
     })
@@ -726,77 +817,93 @@ function filtrarPeriodo(periodo) {
     });
 }
 
-function actualizarTablaMaquinas(maquinas) {
-    const tbody = document.getElementById('tbodyMaquinasIntervenidas');
-    const badgeCount = document.getElementById('footerCountMaquinas');
+function cambiarPagina(nuevaPagina) {
+    if (nuevaPagina < 1 || nuevaPagina > totalPaginas || nuevaPagina === paginaActual) return;
+    aplicarFiltros(null, null, nuevaPagina);
+}
+
+function actualizarControlesPaginacion(pActual, tPaginas, tRegistros) {
+    const elCurrent = document.getElementById('pagiCurrentPage');
+    if (elCurrent) elCurrent.textContent = pActual;
+
+    const elTotalP = document.getElementById('pagiTotalPages');
+    if (elTotalP) elTotalP.textContent = tPaginas;
+
+    const elTotalR = document.getElementById('pagiTotalReg');
+    if (elTotalR) elTotalR.textContent = Number(tRegistros).toLocaleString();
+
+    const elBadge = document.getElementById('tablaCountBadge');
+    if (elBadge) elBadge.textContent = Number(tRegistros).toLocaleString();
+
+    const btnPrev = document.getElementById('btnPagiPrev');
+    if (btnPrev) {
+        btnPrev.disabled = (pActual <= 1);
+    }
+
+    const btnNext = document.getElementById('btnPagiNext');
+    if (btnNext) {
+        btnNext.disabled = (pActual >= tPaginas);
+    }
+}
+
+/**
+ * Re-renderiza el cuerpo de la matriz analítica
+ */
+function actualizarMatrizMaquinas(maquinas) {
+    const tbody = document.getElementById('tbodyMatrizOperativa');
     if (!tbody) return;
 
     if (!maquinas || maquinas.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center text-muted py-5">
-                    <i class="fa-solid fa-filter-circle-xmark display-6 text-muted mb-3 d-block"></i>
-                    <strong>No hay máquinas intervenidas en este periodo.</strong><br>
-                    <span class="small text-muted">Selecciona otro rango de fechas o consulta el histórico completo.</span>
-                    <div class="mt-3">
-                        <a href="<?= base_url('inventario') ?>" class="btn btn-sm btn-primary">
-                            <i class="fa-solid fa-boxes-stacked me-1"></i> Ver Inventario Completo
-                        </a>
-                    </div>
+                <td colspan="5" class="text-center text-muted py-4">
+                    <i class="fa-solid fa-filter-circle-xmark fs-4 text-muted mb-2 d-block"></i>
+                    <span class="fw-semibold">No se encontraron máquinas intervenidas para los filtros seleccionados.</span>
                 </td>
             </tr>
         `;
-        if (badgeCount) badgeCount.textContent = '0';
         return;
     }
-
-    if (badgeCount) badgeCount.textContent = maquinas.length;
 
     let html = '';
     maquinas.forEach(m => {
         const id1 = escapeHtml(m.identificador_1 || m.placa_id || '—');
         const id2 = escapeHtml(m.identificador_2 || m.serial || '—');
-        const traslado = m.num_traslado 
-            ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold"><i class="fa-solid fa-truck-ramp-box me-1"></i>${escapeHtml(m.num_traslado)}</span>` 
-            : '<span class="text-muted small">—</span>';
-        const modelo = escapeHtml(m.ref_principal || m.modelo || m.descripcion || 'Equipo Taller');
 
         let mod = (m.modulo_intervencion || '').toLowerCase();
-        let badgeClass = 'bg-success-subtle text-success border border-success-subtle';
-        let icono = 'fa-laptop';
-        if (mod.includes('diagn') || mod.includes('cpu')) {
-            badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
-            icono = 'fa-desktop';
-        } else if (mod.includes('sopla') || mod.includes('limpie')) {
+        let badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
+        let icono = 'fa-desktop';
+        let customStyle = '';
+
+        if (mod.includes('sopla') || mod.includes('limpie')) {
             badgeClass = 'bg-info-subtle text-info border border-info-subtle';
             icono = 'fa-wind';
+        } else if (mod.includes('porta') || mod.includes('laptop')) {
+            badgeClass = 'bg-purple-subtle text-purple border';
+            icono = 'fa-laptop';
+            customStyle = 'style="background-color: #f5f3ff; color: #7c3aed; border-color: #ddd6fe !important;"';
         }
 
-        const moduloHtml = `<span class="badge ${badgeClass} fw-semibold px-2 py-1"><i class="fa-solid ${icono} me-1"></i>${escapeHtml(m.modulo_intervencion || 'Agregado al Sistema')}</span>`;
+        const moduloHtml = `<span class="pbi-badge ${badgeClass}" ${customStyle}><i class="fa-solid ${icono}"></i> <span>${escapeHtml(m.modulo_intervencion || 'Diagnóstico')}</span></span>`;
         const analista = m.analista_intervencion 
-            ? `<div class="text-truncate text-dark small" style="max-width: 130px;" title="${escapeHtml(m.analista_intervencion)}"><i class="fa-solid fa-user-check text-muted me-1"></i>${escapeHtml(m.analista_intervencion)}</div>` 
-            : '<span class="text-muted small">—</span>';
+            ? `<span class="text-dark"><i class="fa-regular fa-user text-muted me-1"></i>${escapeHtml(m.analista_intervencion)}</span>` 
+            : '<span class="text-muted">—</span>';
         const fecha = m.fecha_intervencion 
-            ? `<i class="fa-regular fa-clock me-1"></i>${formatearFecha(m.fecha_intervencion)}` 
+            ? `<i class="fa-regular fa-clock me-1 text-secondary opacity-75"></i>${formatearFecha(m.fecha_intervencion)}` 
             : '—';
 
         html += `
             <tr>
-                <td class="ps-3 text-muted">${m.id}</td>
+                <td class="text-muted font-monospace">${m.id}</td>
                 <td>
-                    <div class="fw-bold text-dark font-monospace">${id1}</div>
-                    <small class="text-muted font-monospace d-block"><i class="fa-solid fa-barcode me-1 text-secondary opacity-75"></i>${id2}</small>
+                    <div class="fw-semibold text-dark font-monospace" style="font-size: 0.84rem;">${id1}</div>
+                    <div class="text-muted font-monospace" style="font-size: 0.74rem;">
+                        <i class="fa-solid fa-barcode text-secondary opacity-75 me-1"></i>${id2}
+                    </div>
                 </td>
-                <td>${traslado}</td>
-                <td><div class="text-truncate" style="max-width: 180px;" title="${modelo}">${modelo}</div></td>
                 <td>${moduloHtml}</td>
                 <td>${analista}</td>
-                <td class="small text-muted">${fecha}</td>
-                <td class="text-end pe-3">
-                    <span class="badge bg-success text-white px-2 py-1 fw-semibold">
-                        <i class="fa-solid fa-check me-1"></i>Intervenido
-                    </span>
-                </td>
+                <td class="text-muted">${fecha}</td>
             </tr>
         `;
     });
@@ -829,8 +936,8 @@ function escapeHtml(text) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    renderizarGrafico('flujo');
+    renderizarGraficoLineas();
+    renderizarGraficoCumplimiento();
 });
 </script>
 <?= $this->endSection() ?>
-
