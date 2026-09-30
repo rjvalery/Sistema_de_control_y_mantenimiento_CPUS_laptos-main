@@ -264,6 +264,11 @@
                             <i class="fa-solid fa-arrows-rotate me-1"></i> Sincronizar Mapeo BD<?= !empty($traslado) ? ' (' . esc($traslado) . ')' : '' ?>
                         </a>
 
+                        <!-- BOTÓN PARA RECUPERAR TRASLADOS DESDE BITÁCORAS -->
+                        <a href="<?= base_url('inventario/recuperar-traslados') ?>" class="btn btn-outline-info btn-sm fw-bold shadow-sm" title="Mapea y asigna el número de traslado a las máquinas del respaldo que aún no lo tienen, usando las bitácoras técnicas">
+                            <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Recuperar Traslados
+                        </a>
+
                         <?php if ($totalRegistros > 0 && $esAdmin): ?>
                             <form action="<?= base_url('inventario/vaciar') ?>" method="POST" onsubmit="return confirm('¿Seguro que deseas vaciar todos los registros del inventario masivo? Esta acción no se puede deshacer.');">
                                 <?= csrf_field() ?>
@@ -294,12 +299,15 @@
                     <div class="col-12 col-md-3 col-lg-2">
                         <select name="traslado" class="form-select form-select-sm" onchange="this.form.submit()">
                             <option value="">Todos los traslados</option>
+                            <option value="sin_traslado" <?= ($traslado === 'sin_traslado') ? 'selected' : '' ?>>
+                                ⚠️ Sin Traslado (Respaldo BD)
+                            </option>
                             <?php foreach ($trasladosDisponibles as $t): ?>
                                 <option value="<?= esc($t) ?>" <?= ($traslado === $t) ? 'selected' : '' ?>>
                                     Traslado <?= esc($t) ?>
                                 </option>
                             <?php endforeach; ?>
-                            <?php if (!empty($traslado) && !in_array($traslado, $trasladosDisponibles, true)): ?>
+                            <?php if (!empty($traslado) && $traslado !== 'sin_traslado' && !in_array($traslado, $trasladosDisponibles, true)): ?>
                                 <option value="<?= esc($traslado) ?>" selected>Traslado <?= esc($traslado) ?></option>
                             <?php endif; ?>
                         </select>

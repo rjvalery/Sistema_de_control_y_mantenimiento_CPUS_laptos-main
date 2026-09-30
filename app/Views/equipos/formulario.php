@@ -187,25 +187,64 @@
 
                         <!-- 4. Adjuntar / Tomar Foto -->
                         <div class="col-12" id="contenedor_foto">
-                            <label class="form-label fw-bold" for="foto_equipo" id="lbl_evidencia">
+                            <label class="form-label fw-bold" id="lbl_evidencia">
                                 <i class="fa-solid fa-camera me-1 text-primary"></i> Evidencia Fotográfica <span id="foto_asterisco" class="text-danger">*</span>
                             </label>
-                            
-                            <input type="file" id="foto_equipo" name="foto_equipo" class="form-control" accept="image/*" capture="environment">
-                            
-                            <div id="upload-label" class="form-text text-muted mt-1">
-                                Toma una foto con la cámara del dispositivo o selecciona una imagen (JPG, PNG, WEBP, máx 4MB).
-                            </div>
 
-                            <div id="preview-container" class="mt-3 text-center d-none">
-                                <div class="position-relative d-inline-block">
-                                    <img id="preview" src="#" alt="Previsualización de la foto" class="img-thumbnail shadow-sm rounded" style="max-height: 240px; max-width: 100%;">
-                                    <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 rounded-circle shadow" style="width: 28px; height: 28px; padding: 0;" title="Quitar foto" onclick="limpiarPrevisualizacion()">
-                                        <i class="fa-solid fa-xmark"></i>
-                                    </button>
+                            <div class="p-3 border rounded text-center bg-light" style="border-style: dashed !important; border-width: 2px !important; border-color: #0d6efd !important;">
+                                <!-- Input principal para validación del formulario -->
+                                <input type="file" name="foto_equipo" id="foto_equipo" 
+                                       style="position: absolute; opacity: 0; width: 0.1px; height: 0.1px; overflow: hidden;" 
+                                       accept="image/*" required>
+
+                                <div class="d-flex flex-wrap justify-content-center gap-3 mb-2">
+                                    <!-- Botón Cámara con input nativo transparente superpuesto (100% área táctil directa) -->
+                                    <div class="position-relative d-inline-block">
+                                        <button type="button" class="btn btn-primary fw-bold py-2 px-3 shadow-sm" style="pointer-events: none;">
+                                            <i class="fa-solid fa-camera me-2"></i> Abrir Cámara
+                                        </button>
+                                        <input type="file" id="foto_camara_diagnostico" accept="image/*" capture="environment" 
+                                               style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" 
+                                               onchange="manejarSeleccionFoto(this)">
+                                    </div>
+
+                                    <!-- Botón Galería con input nativo transparente superpuesto (100% área táctil directa) -->
+                                    <div class="position-relative d-inline-block">
+                                        <button type="button" class="btn btn-outline-secondary fw-bold py-2 px-3 shadow-sm" style="pointer-events: none;">
+                                            <i class="fa-solid fa-images me-2"></i> Galería / Archivos
+                                        </button>
+                                        <input type="file" id="foto_galeria_diagnostico" accept="image/*" 
+                                               style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" 
+                                               onchange="manejarSeleccionFoto(this)">
+                                    </div>
                                 </div>
-                                <div class="mt-1 small text-success fw-semibold">
-                                    <i class="fa-solid fa-circle-check me-1"></i> Foto seleccionada lista para enviar
+
+                                <div id="upload-label" class="form-text mt-1 text-muted fw-semibold">
+                                    Toca un botón para activar la cámara o seleccionar de la galería.
+                                </div>
+
+                                <!-- Selector directo de respaldo para máxima compatibilidad -->
+                                <div class="mt-2 text-center">
+                                    <a href="javascript:void(0)" class="text-decoration-none small text-muted" onclick="document.getElementById('selector_respaldo').classList.toggle('d-none')">
+                                        <i class="fa-solid fa-sliders me-1"></i> ¿Problemas en la tablet? Probar selector directo alternativo
+                                    </a>
+                                    <div id="selector_respaldo" class="mt-2 d-none">
+                                        <input type="file" id="foto_respaldo" accept="image/*" class="form-control form-control-sm" onchange="manejarSeleccionFoto(this)">
+                                    </div>
+                                </div>
+
+                                <div id="preview-container" class="mt-3 text-center d-none">
+                                    <div class="position-relative d-inline-block">
+                                        <img id="preview" src="#" alt="Previsualización de la foto" class="img-thumbnail shadow-sm rounded" style="max-height: 240px; max-width: 100%;">
+                                        <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 rounded-circle shadow" style="width: 28px; height: 28px; padding: 0;" title="Quitar foto" onclick="limpiarPrevisualizacion()">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    </div>
+                                    <div class="mt-2">
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1">
+                                            <i class="fa-solid fa-circle-check me-1"></i> Foto lista para enviar
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -298,47 +337,161 @@ function evaluarGestion(valor) {
         }
     } else {
         if (fotoPrincipal) {
-            fotoPrincipal.required = true;
+            fotoPrincipal.required = !fotoOptimBlob;
         }
         if (fotoAsterisco) {
             fotoAsterisco.innerHTML = '<span class="text-danger">*</span>';
         }
-        if (uploadLabel) {
-            uploadLabel.textContent = 'Toma una foto con la cámara del dispositivo o selecciona una imagen (JPG, PNG, WEBP, máx 4MB).';
+        if (uploadLabel && !fotoOptimBlob) {
+            uploadLabel.textContent = 'Toma la foto directamente con la cámara o selecciónala de la galería o archivos.';
         }
     }
 }
 
-// Previsualización ligera nativa en JavaScript (URL.createObjectURL)
-function inicializarPrevisualizacion() {
-    const inputFoto = document.getElementById('foto_equipo');
+// Manejo ultrarrápido de compresión y preparación de imagen
+let fotoOptimBlob = null;
+let optimizacionPromesa = null;
+
+function manejarSeleccionFoto(input) {
+    if (!input.files || !input.files[0]) return;
+    const principal = document.getElementById('foto_equipo');
+    if (principal) {
+        principal.required = false;
+        try {
+            if (window.DataTransfer) {
+                const dt = new DataTransfer();
+                dt.items.add(input.files[0]);
+                principal.files = dt.files;
+            }
+        } catch (e) {}
+    }
+    optimizarImagen(input);
+}
+
+function optimizarImagen(input) {
     const previewContainer = document.getElementById('preview-container');
     const preview = document.getElementById('preview');
+    const uploadLabel = document.getElementById('upload-label');
 
-    if (inputFoto) {
-        inputFoto.addEventListener('change', function() {
-            if (this.files && this.files[0]) {
-                const file = this.files[0];
-                if (preview) {
-                    preview.src = URL.createObjectURL(file);
-                }
-                if (previewContainer) {
-                    previewContainer.classList.remove('d-none');
-                }
-            } else {
-                limpiarPrevisualizacion();
-            }
-        });
+    if (!input.files || !input.files[0]) {
+        fotoOptimBlob = null;
+        optimizacionPromesa = null;
+        return;
     }
+
+    const file = input.files[0];
+
+    // 1. VISTA PREVIA INSTANTÁNEA (0 ms): el analista ve su foto de inmediato sin congelamientos
+    const instantUrl = URL.createObjectURL(file);
+    if (preview) preview.src = instantUrl;
+    if (previewContainer) previewContainer.classList.remove('d-none');
+    if (uploadLabel) uploadLabel.innerHTML = '<span class="spinner-border spinner-border-sm text-primary me-1"></span> Optimizando peso en segundo plano...';
+
+    // 2. Compresión en segundo plano ultra-optimizada (Hardware / createImageBitmap ~50-100ms)
+    optimizacionPromesa = (async () => {
+        try {
+            const maxDim = 1000;
+            let canvas = document.createElement('canvas');
+            let ctx = canvas.getContext('2d');
+            let procesado = false;
+
+            // Intentar decodificación y reescalado nativo por hardware (evita cargar megabytes en RAM)
+            if ('createImageBitmap' in window) {
+                try {
+                    const bitmap = await createImageBitmap(file, { resizeWidth: maxDim, resizeQuality: 'medium' });
+                    canvas.width = bitmap.width;
+                    canvas.height = bitmap.height;
+                    ctx.drawImage(bitmap, 0, 0);
+                    bitmap.close();
+                    procesado = true;
+                } catch (e1) {
+                    try {
+                        const bitmap = await createImageBitmap(file);
+                        let w = bitmap.width, h = bitmap.height;
+                        if (w > h && w > maxDim) {
+                            h = Math.round((h * maxDim) / w);
+                            w = maxDim;
+                        } else if (h > maxDim) {
+                            w = Math.round((w * maxDim) / h);
+                            h = maxDim;
+                        }
+                        canvas.width = w;
+                        canvas.height = h;
+                        ctx.drawImage(bitmap, 0, 0, w, h);
+                        bitmap.close();
+                        procesado = true;
+                    } catch (e2) {
+                        procesado = false;
+                    }
+                }
+            }
+
+            // Fallback a Image() si createImageBitmap no está disponible
+            if (!procesado) {
+                await new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        let w = img.width, h = img.height;
+                        if (w > h && w > maxDim) {
+                            h = Math.round((h * maxDim) / w);
+                            w = maxDim;
+                        } else if (h > maxDim) {
+                            w = Math.round((w * maxDim) / h);
+                            h = maxDim;
+                        }
+                        canvas.width = w;
+                        canvas.height = h;
+                        ctx.drawImage(img, 0, 0, w, h);
+                        resolve();
+                    };
+                    img.onerror = () => resolve();
+                    img.src = instantUrl;
+                });
+            }
+
+            // Obtener blob ligero (~60-120 KB)
+            const blob = await new Promise((resolve) => {
+                canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.65);
+            });
+
+            if (blob) {
+                fotoOptimBlob = blob;
+                if (uploadLabel) uploadLabel.innerHTML = `<i class="fa-solid fa-circle-check text-success me-1"></i> Foto lista (${(blob.size / 1024).toFixed(0)} KB)`;
+            } else {
+                fotoOptimBlob = file;
+                if (uploadLabel) uploadLabel.innerHTML = '<i class="fa-solid fa-circle-check text-success me-1"></i> Foto cargada.';
+            }
+        } catch (err) {
+            fotoOptimBlob = file;
+            if (uploadLabel) uploadLabel.innerHTML = '<i class="fa-solid fa-circle-check text-success me-1"></i> Foto lista.';
+        }
+        return fotoOptimBlob;
+    })();
 }
 
 function limpiarPrevisualizacion() {
-    const inputFoto = document.getElementById('foto_equipo');
+    fotoOptimBlob = null;
+    optimizacionPromesa = null;
+    const inputCam = document.getElementById('foto_camara_diagnostico');
+    const inputGal = document.getElementById('foto_galeria_diagnostico');
+    const inputResp = document.getElementById('foto_respaldo');
+    const inputPrincipal = document.getElementById('foto_equipo');
     const previewContainer = document.getElementById('preview-container');
     const preview = document.getElementById('preview');
-    if (inputFoto) inputFoto.value = '';
+    const uploadLabel = document.getElementById('upload-label');
+
+    if (inputCam) inputCam.value = '';
+    if (inputGal) inputGal.value = '';
+    if (inputResp) inputResp.value = '';
+    if (inputPrincipal) inputPrincipal.value = '';
     if (preview) preview.src = '#';
     if (previewContainer) previewContainer.classList.add('d-none');
+    if (uploadLabel) uploadLabel.textContent = 'Toma la foto directamente con la cámara o selecciónala de la galería o archivos.';
+
+    const tipoGestion = document.getElementById('tipo_gestion')?.value;
+    if (inputPrincipal && tipoGestion !== 'Baja') {
+        inputPrincipal.required = true;
+    }
 }
 
 function mostrarModal(icono, titulo, mensaje) {
@@ -357,8 +510,10 @@ async function enviarFormulario() {
     if (tipoGestion === 'Baja') {
         if (principal) principal.required = false;
     } else {
-        if (principal && (!principal.files || !principal.files[0])) {
+        if (principal && !fotoOptimBlob && (!principal.files || !principal.files[0])) {
             principal.required = true;
+        } else if (principal) {
+            principal.required = false;
         }
     }
 
@@ -371,7 +526,19 @@ async function enviarFormulario() {
     btnSubmit.disabled = true;
     btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Guardando...';
 
+    // Si aún está terminando la compresión de 50ms, esperar silenciosamente
+    if (optimizacionPromesa) {
+        try {
+            await optimizacionPromesa;
+        } catch (e) {}
+    }
+
     const formData = new FormData(form);
+
+    // Garantizar que siempre se envíe el blob comprimido (evita subir fotos crudas de 10-15MB o bloqueos de 4MB)
+    if (fotoOptimBlob) {
+        formData.set('foto_equipo', fotoOptimBlob, 'foto_diagnostico.jpg');
+    }
 
     if (tipoGestion === 'Baja') {
         const sdBaja = document.getElementById('serial_disco_baja')?.value?.trim();
@@ -393,9 +560,6 @@ async function enviarFormulario() {
             mostrarModal('<i class="fa-solid fa-circle-check text-success"></i>', '¡Guardado con éxito!', data.message || 'El registro se ha guardado correctamente.');
             form.reset();
             limpiarPrevisualizacion();
-            if (principal) principal.required = true;
-            const asterisco = document.getElementById('foto_asterisco');
-            if (asterisco) asterisco.innerHTML = '<span class="text-danger">*</span>';
             ocultarTodos();
             const feedbackDiv = document.getElementById('inventario_feedback');
             if (feedbackDiv) feedbackDiv.innerHTML = '';
@@ -414,7 +578,6 @@ async function enviarFormulario() {
 
 // Sincronización en tiempo real con inventario al tipear ID o Serial
 document.addEventListener('DOMContentLoaded', function() {
-    inicializarPrevisualizacion();
 
     const placaInput = document.getElementById('placa_id');
     const spinnerPlaca = document.getElementById('spinner_placa');

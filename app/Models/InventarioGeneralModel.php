@@ -922,7 +922,15 @@ class InventarioGeneralModel extends Model
         }
 
         if ($traslado !== null && trim($traslado) !== '') {
-            $builder->where('num_traslado', trim($traslado));
+            $t = trim($traslado);
+            if ($t === 'sin_traslado' || $t === 'sin-traslado') {
+                $builder->groupStart()
+                    ->where('num_traslado IS NULL')
+                    ->orWhere('TRIM(num_traslado) =', '')
+                    ->groupEnd();
+            } else {
+                $builder->where('num_traslado', $t);
+            }
         }
 
         if ($busqueda !== null && trim($busqueda) !== '') {
@@ -945,6 +953,267 @@ class InventarioGeneralModel extends Model
         }
 
         return $builder->orderBy('id', 'DESC')->limit($limite)->get()->getResultArray();
+    }
+
+    /**
+     * Realiza un mapeo y auditoría técnica exhaustiva de las máquinas que NO tienen número de traslado
+     * en inventario_general, verificando su origen de carga (respaldo/archivo), estado de intervención
+     * y su trazabilidad con las bitácoras (equipos, soplado_registros, garantias_portatiles).
+     *
+     * @return array Resumen analítico con conteos, orígenes, trazabilidad y muestra de registros
+     */
+    public function auditarMaquinasSinTraslado(): array
+    {
+        $this->asegurarTabla();
+        $db = $this->db;
+
+        // 1. Totales globales en inventario_general
+        $totalGeneral = (int) $this->countAllResults();
+
+        $conTraslado = (int) $this->builder()
+            ->where('num_traslado IS NOT NULL')
+            ->where('TRIM(num_traslado) !=', '')
+            ->countAllResults();
+
+        $sinTraslado = (int) $this->builder()
+            ->groupStart()
+                ->where('num_traslado IS NULL')
+                ->orWhere('TRIM(num_traslado) =', '')
+            ->groupEnd()
+            ->countAllResults();
+
+        // 2. Desglose de traslados existentes en inventario_general
+        $resumenTraslados = $this->builder()
+            ->select('COALESCE(NULLIF(TRIM(num_traslado), ""), "[SIN TRASLADO]") as traslado, COUNT(*) as total, SUM(CASE WHEN intervenido = 1 THEN 1 ELSE 0 END) as intervenidos, SUM(CASE WHEN intervenido = 0 THEN 1 ELSE 0 END) as pendientes')
+            ->groupBy('traslado')
+            ->orderBy('total', 'DESC')
+            ->get()
+            ->getResultArray();
+
+        // 3. Análisis del origen de las máquinas SIN traslado
+        $origenesSinTraslado = $this->builder()
+            ->select('COALESCE(archivo_origen, "[Sin archivo registrado / Respaldo directo]") as archivo, COALESCE(usuario_cargue, "Sistema / Respaldo") as usuario, DATE(created_at) as fecha_cargue, COUNT(*) as total, SUM(CASE WHEN intervenido = 1 THEN 1 ELSE 0 END) as intervenidas, SUM(CASE WHEN intervenido = 0 THEN 1 ELSE 0 END) as pendientes')
+            ->groupStart()
+                ->where('num_traslado IS NULL')
+                ->orWhere('TRIM(num_traslado) =', '')
+            ->groupEnd()
+            ->groupBy('archivo, usuario, fecha_cargue')
+            ->orderBy('total', 'DESC')
+            ->get()
+            ->getResultArray();
+
+        // 4. Módulos donde fueron intervenidas
+        $modulosIntervencion = $this->builder()
+            ->select('COALESCE(modulo_intervencion, "Pendiente por Intervenir") as modulo, COUNT(*) as cantidad')
+            ->groupStart()
+                ->where('num_traslado IS NULL')
+                ->orWhere('TRIM(num_traslado) =', '')
+            ->groupEnd()
+            ->groupBy('modulo')
+            ->orderBy('cantidad', 'DESC')
+            ->get()
+            ->getResultArray();
+
+        // 5. Cruce y Trazabilidad con Bitácoras (Equipos, Soplado, Portátiles)
+        $recuperablesEquipos = 0;
+        $recuperablesSoplado = 0;
+        $recuperablesPortatiles = 0;
+
+        if ($db->tableExists('equipos')) {
+            $row = $db->query("
+                SELECT COUNT(DISTINCT ig.id) as total
+                FROM `inventario_general` ig
+                INNER JOIN `equipos` eq ON (
+                    (eq.placa_id IS NOT NULL AND eq.placa_id != '' AND (
+                        ig.identificador_1 COLLATE utf8mb4_general_ci = eq.placa_id COLLATE utf8mb4_general_ci OR 
+                        ig.identificador_2 COLLATE utf8mb4_general_ci = eq.placa_id COLLATE utf8mb4_general_ci OR 
+                        ig.placa_id COLLATE utf8mb4_general_ci        = eq.placa_id COLLATE utf8mb4_general_ci OR 
+                        ig.serial COLLATE utf8mb4_general_ci          = eq.placa_id COLLATE utf8mb4_general_ci
+                    ))
+                    OR
+                    (eq.serial_disco IS NOT NULL AND eq.serial_disco != '' AND (
+                        ig.identificador_1 COLLATE utf8mb4_general_ci = eq.serial_disco COLLATE utf8mb4_general_ci OR 
+                        ig.identificador_2 COLLATE utf8mb4_general_ci = eq.serial_disco COLLATE utf8mb4_general_ci OR 
+                        ig.placa_id COLLATE utf8mb4_general_ci        = eq.serial_disco COLLATE utf8mb4_general_ci OR 
+                        ig.serial COLLATE utf8mb4_general_ci          = eq.serial_disco COLLATE utf8mb4_general_ci
+                    ))
+                )
+                WHERE (ig.num_traslado IS NULL OR TRIM(ig.num_traslado) = '')
+                  AND eq.num_traslado IS NOT NULL AND TRIM(eq.num_traslado) != '';
+            ")->getRowArray();
+            $recuperablesEquipos = (int) ($row['total'] ?? 0);
+        }
+
+        if ($db->tableExists('soplado_registros')) {
+            $row = $db->query("
+                SELECT COUNT(DISTINCT ig.id) as total
+                FROM `inventario_general` ig
+                INNER JOIN `soplado_registros` sp ON (
+                    sp.placa_id IS NOT NULL AND sp.placa_id != '' AND (
+                        ig.identificador_1 COLLATE utf8mb4_general_ci = sp.placa_id COLLATE utf8mb4_general_ci OR 
+                        ig.identificador_2 COLLATE utf8mb4_general_ci = sp.placa_id COLLATE utf8mb4_general_ci OR 
+                        ig.placa_id COLLATE utf8mb4_general_ci        = sp.placa_id COLLATE utf8mb4_general_ci OR 
+                        ig.serial COLLATE utf8mb4_general_ci          = sp.placa_id COLLATE utf8mb4_general_ci
+                    )
+                )
+                WHERE (ig.num_traslado IS NULL OR TRIM(ig.num_traslado) = '')
+                  AND sp.num_traslado IS NOT NULL AND TRIM(sp.num_traslado) != '';
+            ")->getRowArray();
+            $recuperablesSoplado = (int) ($row['total'] ?? 0);
+        }
+
+        if ($db->tableExists('garantias_portatiles')) {
+            $row = $db->query("
+                SELECT COUNT(DISTINCT ig.id) as total
+                FROM `inventario_general` ig
+                INNER JOIN `garantias_portatiles` gp ON (
+                    (gp.placa_id_equipo IS NOT NULL AND gp.placa_id_equipo != '' AND (
+                        ig.identificador_1 COLLATE utf8mb4_general_ci = gp.placa_id_equipo COLLATE utf8mb4_general_ci OR 
+                        ig.identificador_2 COLLATE utf8mb4_general_ci = gp.placa_id_equipo COLLATE utf8mb4_general_ci OR 
+                        ig.placa_id COLLATE utf8mb4_general_ci        = gp.placa_id_equipo COLLATE utf8mb4_general_ci OR 
+                        ig.serial COLLATE utf8mb4_general_ci          = gp.placa_id_equipo COLLATE utf8mb4_general_ci
+                    ))
+                    OR
+                    (gp.serial_disco IS NOT NULL AND gp.serial_disco != '' AND (
+                        ig.identificador_1 COLLATE utf8mb4_general_ci = gp.serial_disco COLLATE utf8mb4_general_ci OR 
+                        ig.identificador_2 COLLATE utf8mb4_general_ci = gp.serial_disco COLLATE utf8mb4_general_ci OR 
+                        ig.placa_id COLLATE utf8mb4_general_ci        = gp.serial_disco COLLATE utf8mb4_general_ci OR 
+                        ig.serial COLLATE utf8mb4_general_ci          = gp.serial_disco COLLATE utf8mb4_general_ci
+                    ))
+                )
+                WHERE (ig.num_traslado IS NULL OR TRIM(ig.num_traslado) = '')
+                  AND gp.numero_traslado IS NOT NULL AND TRIM(gp.numero_traslado) != '';
+            ")->getRowArray();
+            $recuperablesPortatiles = (int) ($row['total'] ?? 0);
+        }
+
+        // 6. Muestra representativa de 15 máquinas sin traslado
+        $muestraSinTraslado = $this->builder()
+            ->select('id, identificador_1, identificador_2, ref_principal, descripcion, intervenido, modulo_intervencion, analista_intervencion, fecha_intervencion, archivo_origen, usuario_cargue, created_at')
+            ->groupStart()
+                ->where('num_traslado IS NULL')
+                ->orWhere('TRIM(num_traslado) =', '')
+            ->groupEnd()
+            ->orderBy('id', 'ASC')
+            ->limit(15)
+            ->get()
+            ->getResultArray();
+
+        return [
+            'total_inventario'       => $totalGeneral,
+            'con_traslado'           => $conTraslado,
+            'sin_traslado'           => $sinTraslado,
+            'resumen_traslados'      => $resumenTraslados,
+            'origenes_sin_traslado'  => $origenesSinTraslado,
+            'modulos_intervencion'   => $modulosIntervencion,
+            'trazabilidad_bitacoras' => [
+                'recuperables_en_equipos'    => $recuperablesEquipos,
+                'recuperables_en_soplado'    => $recuperablesSoplado,
+                'recuperables_en_portatiles' => $recuperablesPortatiles,
+            ],
+            'muestra'                => $muestraSinTraslado,
+        ];
+    }
+
+    /**
+     * Mapea y sincroniza los números de traslado faltantes en inventario_general
+     * copiándolos desde las tablas de bitácoras donde los técnicos sí capturaron el traslado.
+     * NUNCA sobreescribe un número de traslado existente.
+     *
+     * @return array Resumen de filas actualizadas por cada módulo técnico
+     */
+    public function recuperarTrasladosDesdeBitacoras(): array
+    {
+        $this->asegurarTabla();
+        $db = $this->db;
+
+        $actualizadosEquipos = 0;
+        $actualizadosSoplado = 0;
+        $actualizadosPortatiles = 0;
+
+        // 1. Recuperar desde `equipos` (Diagnóstico CPU)
+        if ($db->tableExists('equipos')) {
+            $sqlEq = "UPDATE `inventario_general` ig
+                INNER JOIN `equipos` eq ON (
+                    (eq.placa_id IS NOT NULL AND eq.placa_id != '' AND (
+                        ig.identificador_1 COLLATE utf8mb4_general_ci = eq.placa_id COLLATE utf8mb4_general_ci OR 
+                        ig.identificador_2 COLLATE utf8mb4_general_ci = eq.placa_id COLLATE utf8mb4_general_ci OR 
+                        ig.placa_id COLLATE utf8mb4_general_ci        = eq.placa_id COLLATE utf8mb4_general_ci OR 
+                        ig.serial COLLATE utf8mb4_general_ci          = eq.placa_id COLLATE utf8mb4_general_ci
+                    ))
+                    OR
+                    (eq.serial_disco IS NOT NULL AND eq.serial_disco != '' AND (
+                        ig.identificador_1 COLLATE utf8mb4_general_ci = eq.serial_disco COLLATE utf8mb4_general_ci OR 
+                        ig.identificador_2 COLLATE utf8mb4_general_ci = eq.serial_disco COLLATE utf8mb4_general_ci OR 
+                        ig.placa_id COLLATE utf8mb4_general_ci        = eq.serial_disco COLLATE utf8mb4_general_ci OR 
+                        ig.serial COLLATE utf8mb4_general_ci          = eq.serial_disco COLLATE utf8mb4_general_ci
+                    ))
+                )
+                SET ig.num_traslado = eq.num_traslado
+                WHERE (ig.num_traslado IS NULL OR TRIM(ig.num_traslado) = '')
+                  AND eq.num_traslado IS NOT NULL AND TRIM(eq.num_traslado) != '';";
+            $db->query($sqlEq);
+            $actualizadosEquipos = $db->affectedRows();
+        }
+
+        // 2. Recuperar desde `soplado_registros`
+        if ($db->tableExists('soplado_registros')) {
+            $sqlSp = "UPDATE `inventario_general` ig
+                INNER JOIN `soplado_registros` sp ON (
+                    sp.placa_id IS NOT NULL AND sp.placa_id != '' AND (
+                        ig.identificador_1 COLLATE utf8mb4_general_ci = sp.placa_id COLLATE utf8mb4_general_ci OR 
+                        ig.identificador_2 COLLATE utf8mb4_general_ci = sp.placa_id COLLATE utf8mb4_general_ci OR 
+                        ig.placa_id COLLATE utf8mb4_general_ci        = sp.placa_id COLLATE utf8mb4_general_ci OR 
+                        ig.serial COLLATE utf8mb4_general_ci          = sp.placa_id COLLATE utf8mb4_general_ci
+                    )
+                )
+                SET ig.num_traslado = sp.num_traslado
+                WHERE (ig.num_traslado IS NULL OR TRIM(ig.num_traslado) = '')
+                  AND sp.num_traslado IS NOT NULL AND TRIM(sp.num_traslado) != '';";
+            $db->query($sqlSp);
+            $actualizadosSoplado = $db->affectedRows();
+        }
+
+        // 3. Recuperar desde `garantias_portatiles`
+        if ($db->tableExists('garantias_portatiles')) {
+            $sqlGp = "UPDATE `inventario_general` ig
+                INNER JOIN `garantias_portatiles` gp ON (
+                    (gp.placa_id_equipo IS NOT NULL AND gp.placa_id_equipo != '' AND (
+                        ig.identificador_1 COLLATE utf8mb4_general_ci = gp.placa_id_equipo COLLATE utf8mb4_general_ci OR 
+                        ig.identificador_2 COLLATE utf8mb4_general_ci = gp.placa_id_equipo COLLATE utf8mb4_general_ci OR 
+                        ig.placa_id COLLATE utf8mb4_general_ci        = gp.placa_id_equipo COLLATE utf8mb4_general_ci OR 
+                        ig.serial COLLATE utf8mb4_general_ci          = gp.placa_id_equipo COLLATE utf8mb4_general_ci
+                    ))
+                    OR
+                    (gp.serial_disco IS NOT NULL AND gp.serial_disco != '' AND (
+                        ig.identificador_1 COLLATE utf8mb4_general_ci = gp.serial_disco COLLATE utf8mb4_general_ci OR 
+                        ig.identificador_2 COLLATE utf8mb4_general_ci = gp.serial_disco COLLATE utf8mb4_general_ci OR 
+                        ig.placa_id COLLATE utf8mb4_general_ci        = gp.serial_disco COLLATE utf8mb4_general_ci OR 
+                        ig.serial COLLATE utf8mb4_general_ci          = gp.serial_disco COLLATE utf8mb4_general_ci
+                    ))
+                )
+                SET ig.num_traslado = gp.numero_traslado
+                WHERE (ig.num_traslado IS NULL OR TRIM(ig.num_traslado) = '')
+                  AND gp.numero_traslado IS NOT NULL AND TRIM(gp.numero_traslado) != '';";
+            $db->query($sqlGp);
+            $actualizadosPortatiles = $db->affectedRows();
+        }
+
+        $totalRecuperados = $actualizadosEquipos + $actualizadosSoplado + $actualizadosPortatiles;
+        $restantesSinTraslado = (int) $this->builder()
+            ->groupStart()
+                ->where('num_traslado IS NULL')
+                ->orWhere('TRIM(num_traslado) =', '')
+            ->groupEnd()
+            ->countAllResults();
+
+        return [
+            'actualizados_equipos'    => $actualizadosEquipos,
+            'actualizados_soplado'    => $actualizadosSoplado,
+            'actualizados_portatiles' => $actualizadosPortatiles,
+            'total_recuperados'       => $totalRecuperados,
+            'restantes_sin_traslado'  => $restantesSinTraslado,
+        ];
     }
 }
 

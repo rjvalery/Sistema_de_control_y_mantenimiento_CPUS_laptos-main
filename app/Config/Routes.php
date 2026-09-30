@@ -10,6 +10,7 @@ use CodeIgniter\Router\RouteCollection;
 $routes->get('login', 'Auth::index', ['filter' => 'guest']);
 $routes->post('login', 'Auth::authenticate', ['filter' => ['guest', 'csrf']]);
 $routes->get('logout', 'Auth::logout', ['filter' => 'auth']);
+$routes->get('inventario/auditoria-traslados', 'Inventario::auditoriaTraslados');
 
 $routes->group('', ['filter' => 'auth'], static function ($routes) {
     $routes->get('/', 'Dashboard::index');
@@ -29,6 +30,7 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
     $routes->get('cargue-masivo/plantilla', 'CargueMasivo::plantilla');
     $routes->get('cargue-masivo/sincronizar', 'CargueMasivo::sincronizar');
     $routes->post('cargue-masivo/sincronizar', 'CargueMasivo::sincronizar');
+    $routes->get('cargue-masivo/recuperar-traslados', 'CargueMasivo::recuperarTraslados');
     $routes->post('cargue-masivo/vaciar', 'CargueMasivo::vaciar');
 
     $routes->get('inventario', 'CargueMasivo::index');
@@ -36,6 +38,7 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
     $routes->get('inventario/plantilla', 'CargueMasivo::plantilla');
     $routes->get('inventario/sincronizar', 'CargueMasivo::sincronizar');
     $routes->post('inventario/sincronizar', 'CargueMasivo::sincronizar');
+    $routes->get('inventario/recuperar-traslados', 'CargueMasivo::recuperarTraslados');
     $routes->post('inventario/vaciar', 'CargueMasivo::vaciar');
     $routes->get('inventario/buscar-equipo', 'Inventario::buscarEquipo');
 

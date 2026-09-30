@@ -92,6 +92,22 @@ class CargueMasivo extends BaseController
     }
 
     /**
+     * Mapea y recupera los números de traslado de las máquinas que llegaron sin traslado
+     * (por respaldo de base de datos) cruzándolas con las bitácoras técnicas donde sí fueron capturados.
+     */
+    public function recuperarTraslados(): ResponseInterface
+    {
+        if (session('usuario_rol') !== 'admin') {
+            return redirect()->to(base_url('dashboard'))->with('error', 'Acceso denegado.');
+        }
+
+        $res = $this->inventarioModel->recuperarTrasladosDesdeBitacoras();
+        $msg = "Recuperación completada: Se asignó número de traslado a <strong>{$res['total_recuperados']}</strong> máquinas desde las bitácoras (Diagnóstico CPU: {$res['actualizados_equipos']}, Soplado: {$res['actualizados_soplado']}, Portátiles: {$res['actualizados_portatiles']}). Restantes sin traslado: {$res['restantes_sin_traslado']}.";
+
+        return redirect()->to(base_url('inventario'))->with('msg', $msg);
+    }
+
+    /**
      * Descarga la plantilla CSV oficial con codificación UTF-8 basada en Formato en Cubic (8 columnas).
      */
     public function plantilla(): ResponseInterface

@@ -74,4 +74,22 @@ class Inventario extends BaseController
             'mensaje'    => 'Equipo no registrado previamente ni en cargue masivo.',
         ]);
     }
+
+    /**
+     * Endpoint para auditar y mapear máquinas sin número de traslado, identificando su origen y trazabilidad.
+     */
+    public function auditoriaTraslados(): ResponseInterface
+    {
+        $resultado = $this->inventarioModel->auditarMaquinasSinTraslado();
+        return $this->response->setJSON($resultado);
+    }
+
+    /**
+     * Endpoint para mapear y recuperar traslados faltantes desde bitácoras técnicas.
+     */
+    public function recuperarTraslados(): ResponseInterface
+    {
+        $resultado = $this->inventarioModel->recuperarTrasladosDesdeBitacoras();
+        return $this->response->setJSON($resultado);
+    }
 }

@@ -123,32 +123,44 @@
                             <label class="form-label fw-bold"><i class="fa-solid fa-camera me-1 text-primary"></i> Evidencia Fotográfica *</label>
                             
                             <div class="p-3 border rounded text-center bg-light" style="border-style: dashed !important; border-width: 2px !important; border-color: #0d6efd !important;">
-                                <!-- Input Cámara directa para móviles -->
-                                <input type="file" id="foto_camara_soplado" accept="image/*" capture="environment" 
-                                       style="position: absolute; opacity: 0; width: 0.1px; height: 0.1px; overflow: hidden; pointer-events: none;" 
-                                       onchange="manejarSeleccionFotoSoplado(this)">
-
-                                <!-- Input Galería / Archivos sin capture (funciona en 100% de dispositivos y navegadores) -->
-                                <input type="file" id="foto_galeria_soplado" accept="image/*" 
-                                       style="position: absolute; opacity: 0; width: 0.1px; height: 0.1px; overflow: hidden; pointer-events: none;" 
-                                       onchange="manejarSeleccionFotoSoplado(this)">
-
                                 <!-- Input principal para validación del formulario -->
                                 <input type="file" name="foto_equipo" id="foto_equipo" 
-                                       style="position: absolute; opacity: 0; width: 0.1px; height: 0.1px; overflow: hidden; pointer-events: none;" 
+                                       style="position: absolute; opacity: 0; width: 0.1px; height: 0.1px; overflow: hidden;" 
                                        accept="image/*" required>
 
-                                <div class="d-flex flex-wrap justify-content-center gap-2 mb-2">
-                                    <label for="foto_camara_soplado" class="btn btn-primary fw-bold py-2 px-3 shadow-sm" style="cursor: pointer;">
-                                        <i class="fa-solid fa-camera me-2"></i> Abrir Cámara
-                                    </label>
-                                    <label for="foto_galeria_soplado" class="btn btn-outline-secondary fw-bold py-2 px-3 shadow-sm" style="cursor: pointer;">
-                                        <i class="fa-solid fa-images me-2"></i> Galería / Archivos
-                                    </label>
+                                <div class="d-flex flex-wrap justify-content-center gap-3 mb-2">
+                                    <!-- Botón Cámara con input nativo superpuesto -->
+                                    <div class="position-relative d-inline-block">
+                                        <button type="button" class="btn btn-primary fw-bold py-2 px-3 shadow-sm" style="pointer-events: none;">
+                                            <i class="fa-solid fa-camera me-2"></i> Abrir Cámara
+                                        </button>
+                                        <input type="file" id="foto_camara_soplado" accept="image/*" capture="environment" 
+                                               style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" 
+                                               onchange="manejarSeleccionFotoSoplado(this)">
+                                    </div>
+
+                                    <!-- Botón Galería con input nativo superpuesto -->
+                                    <div class="position-relative d-inline-block">
+                                        <button type="button" class="btn btn-outline-secondary fw-bold py-2 px-3 shadow-sm" style="pointer-events: none;">
+                                            <i class="fa-solid fa-images me-2"></i> Galería / Archivos
+                                        </button>
+                                        <input type="file" id="foto_galeria_soplado" accept="image/*" 
+                                               style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" 
+                                               onchange="manejarSeleccionFotoSoplado(this)">
+                                    </div>
                                 </div>
 
                                 <div id="upload-label" class="form-text mt-1 text-muted fw-semibold">
-                                    Toma la foto directamente con la cámara o selecciónala de la galería.
+                                    Toca un botón para activar la cámara o seleccionar de la galería.
+                                </div>
+
+                                <div class="mt-2 text-center">
+                                    <a href="javascript:void(0)" class="text-decoration-none small text-muted" onclick="document.getElementById('selector_respaldo_soplado').classList.toggle('d-none')">
+                                        <i class="fa-solid fa-sliders me-1"></i> ¿Problemas en la tablet? Probar selector directo alternativo
+                                    </a>
+                                    <div id="selector_respaldo_soplado" class="mt-2 d-none">
+                                        <input type="file" id="foto_respaldo_soplado" accept="image/*" class="form-control form-control-sm" onchange="manejarSeleccionFotoSoplado(this)">
+                                    </div>
                                 </div>
 
                                 <div id="preview-container" class="mt-3 text-center d-none">
