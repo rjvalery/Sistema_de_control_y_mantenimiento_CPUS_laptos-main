@@ -17,6 +17,49 @@ class Usuarios extends BaseController
     }
 
     /**
+     * Muestra la vista principal del módulo de gestión de usuarios y asignación de roles.
+     */
+    public function index(): ResponseInterface|string
+    {
+        if (session('usuario_rol') !== 'admin') {
+            return redirect()->to(base_url('dashboard'))->with('error', 'Acceso denegado: solo administradores pueden acceder al módulo de usuarios.');
+        }
+
+        $busqueda  = trim((string) $this->request->getGet('buscar'));
+        $filtroRol = trim((string) $this->request->getGet('rol'));
+
+        $builder = $this->usuarioModel->builder();
+
+        if ($filtroRol !== '' && in_array($filtroRol, ['admin', 'analista'], true)) {
+            $builder->where('rol', $filtroRol);
+        }
+
+        if ($busqueda !== '') {
+            $builder->groupStart()
+                ->like('nombre', $busqueda)
+                ->orLike('usuario', $busqueda)
+                ->groupEnd();
+        }
+
+        $usuarios = $builder->orderBy('id', 'ASC')->get()->getResultArray();
+
+        $totalUsuarios  = $this->usuarioModel->countAllResults();
+        $totalAdmins    = (new UsuarioModel())->where('rol', 'admin')->countAllResults();
+        $totalAnalistas = (new UsuarioModel())->where('rol', 'analista')->countAllResults();
+
+        $data = [
+            'usuarios'       => $usuarios,
+            'totalUsuarios'  => $totalUsuarios,
+            'totalAdmins'    => $totalAdmins,
+            'totalAnalistas' => $totalAnalistas,
+            'busqueda'       => $busqueda,
+            'filtroRol'      => $filtroRol,
+        ];
+
+        return view('usuarios/index', $data);
+    }
+
+    /**
      * Asigna o cambia el rol de un usuario del sistema (solo accesible por administradores).
      */
     public function cambiarRol(): ResponseInterface
@@ -30,26 +73,26 @@ class Usuarios extends BaseController
 
         $rolesPermitidos = ['admin', 'analista'];
         if (!in_array($nuevoRol, $rolesPermitidos, true)) {
-            return redirect()->to(base_url('dashboard'))->with('error', 'El rol seleccionado no es válido.');
+            return redirect()->to(base_url('usuarios'))->with('error', 'El rol seleccionado no es válido.');
         }
 
         $usuario = $this->usuarioModel->find($id);
         if (!$usuario) {
-            return redirect()->to(base_url('dashboard'))->with('error', 'Usuario no encontrado.');
+            return redirect()->to(base_url('usuarios'))->with('error', 'Usuario no encontrado.');
         }
 
         // Evitar que el administrador actual se degrade a analista a sí mismo por error
         if ((int) session('usuario_id') === $id && $nuevoRol !== 'admin') {
-            return redirect()->to(base_url('dashboard'))->with('error', 'No puedes quitarte el rol de administrador a ti mismo.');
+            return redirect()->to(base_url('usuarios'))->with('error', 'No puedes quitarte el rol de administrador a ti mismo.');
         }
 
         $this->usuarioModel->update($id, ['rol' => $nuevoRol]);
 
-        return redirect()->to(base_url('dashboard'))->with('msg', "Rol de '{$usuario['nombre']}' actualizado a '{$nuevoRol}' correctamente.");
+        return redirect()->to(base_url('usuarios'))->with('msg', "Rol de '{$usuario['nombre']}' actualizado a '{$nuevoRol}' correctamente.");
     }
 
     /**
-     * Crea un nuevo usuario con rol asignado desde el dashboard.
+     * Crea un nuevo usuario con rol asignado desde el módulo de usuarios.
      */
     public function crear(): ResponseInterface
     {
@@ -66,7 +109,7 @@ class Usuarios extends BaseController
 
         if (!$this->validate($rules)) {
             $errores = implode(' ', $this->validator->getErrors());
-            return redirect()->to(base_url('dashboard'))->with('error', $errores);
+            return redirect()->to(base_url('usuarios'))->with('error', $errores);
         }
 
         $password = (string) $this->request->getPost('password');
@@ -80,7 +123,7 @@ class Usuarios extends BaseController
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
-        return redirect()->to(base_url('dashboard'))->with('msg', 'Nuevo usuario creado exitosamente con su rol asignado.');
+        return redirect()->to(base_url('usuarios'))->with('msg', 'Nuevo usuario creado exitosamente con su rol asignado.');
     }
 
     /**
@@ -96,7 +139,7 @@ class Usuarios extends BaseController
         $usuario = $this->usuarioModel->find($id);
 
         if (!$usuario) {
-            return redirect()->to(base_url('dashboard'))->with('error', 'Usuario no encontrado.');
+            return redirect()->to(base_url('usuarios'))->with('error', 'Usuario no encontrado.');
         }
 
         $nuevaPassword = trim((string) $this->request->getPost('nueva_password'));
@@ -105,14 +148,14 @@ class Usuarios extends BaseController
         }
 
         if (strlen($nuevaPassword) < 6) {
-            return redirect()->to(base_url('dashboard'))->with('error', 'La nueva contraseña debe tener al menos 6 caracteres.');
+            return redirect()->to(base_url('usuarios'))->with('error', 'La nueva contraseña debe tener al menos 6 caracteres.');
         }
 
         $this->usuarioModel->update($id, [
             'password' => password_hash($nuevaPassword, PASSWORD_BCRYPT),
         ]);
 
-        return redirect()->to(base_url('dashboard'))->with('msg', "Contraseña de '{$usuario['nombre']}' ({$usuario['usuario']}) restablecida con éxito a: {$nuevaPassword}");
+        return redirect()->to(base_url('usuarios'))->with('msg', "Contraseña de '{$usuario['nombre']}' ({$usuario['usuario']}) restablecida con éxito a: {$nuevaPassword}");
     }
 
     /**

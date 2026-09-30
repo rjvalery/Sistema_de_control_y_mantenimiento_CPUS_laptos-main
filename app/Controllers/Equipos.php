@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Models\EquipoModel;
@@ -29,26 +31,54 @@ class Equipos extends BaseController
         return view('equipos/formulario', $data);
     }
 
-    public function guardar()
+    public function guardar(): ResponseInterface
     {
         $placaId     = (string) ($this->request->getPost('placa_id') ?? '');
         $tipoGestion = (string) ($this->request->getPost('tipo_gestion') ?? '');
         $file        = $this->request->getFile('foto_equipo');
-        
-        // Guarda en C:\Users\LENOVO\Pictures\fotos si se envió archivo válido
-        $fotoRuta = null;
-        if ($file && $file->isValid() && !$file->hasMoved()) {
-            $fotoRuta = $this->uploadService->guardarEvidencia($file, $placaId, 'diagnostico');
-        } elseif ($tipoGestion !== 'Baja') {
+        $tieneArchivo = $file && $file->isValid() && !$file->hasMoved();
+        $esBaja      = ($tipoGestion === 'Baja');
+
+        // Validación con servicio nativo de CodeIgniter 4
+        $rules = [
+            'foto_equipo' => [
+                'label'  => 'Evidencia fotográfica',
+                'rules'  => ($esBaja && !$tieneArchivo)
+                    ? 'permit_empty'
+                    : 'uploaded[foto_equipo]|is_image[foto_equipo]|mime_in[foto_equipo,image/jpg,image/jpeg,image/png,image/webp]|max_size[foto_equipo,4096]',
+                'errors' => [
+                    'uploaded' => 'Debe adjuntar una evidencia fotográfica del equipo.',
+                    'is_image' => 'El archivo seleccionado debe ser una imagen válida.',
+                    'mime_in'  => 'El formato de imagen debe ser JPG, JPEG, PNG o WEBP.',
+                    'max_size' => 'El tamaño de la imagen no puede superar los 4MB.'
+                ]
+            ]
+        ];
+
+        if (!$this->validate($rules)) {
             return $this->response->setJSON([
                 'status'  => 'error',
-                'message' => 'La evidencia fotográfica es obligatoria para este tipo de gestión.'
+                'message' => $this->validator->getError('foto_equipo') ?: 'Error en la validación de la imagen.'
             ]);
+        }
+
+        // Guardado seguro con nombre aleatorio en public/uploads/equipos/
+        $fotoRuta = null;
+        if ($file && $file->isValid() && !$file->hasMoved()) {
+            $uploadDir = FCPATH . 'uploads/equipos/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+            $nombreFoto = $file->getRandomName();
+            $file->move($uploadDir, $nombreFoto);
+            $fotoRuta = 'uploads/equipos/' . $nombreFoto;
         }
 
         $nombreAnalista = (session('usuario_rol') === 'analista')
             ? (string) session('usuario_nombre')
             : (string) ($this->request->getPost('nombre_analista') ?: session('usuario_nombre'));
+
+        $serialDisco = trim((string) ($this->request->getPost('serial_disco') ?: $this->request->getPost('serial_disco_baja')));
 
         $data = [
             'nombre_analista'     => $nombreAnalista,
@@ -60,7 +90,7 @@ class Equipos extends BaseController
             'estado_actual'       => $this->request->getPost('estado_actual'),
             'que_va_intervenir'   => $this->request->getPost('que_va_intervenir'),
             'origen_pieza'        => $this->request->getPost('origen_pieza'),
-            'serial_disco'        => $this->request->getPost('serial_disco'),
+            'serial_disco'        => $serialDisco !== '' ? $serialDisco : null,
             'descripcion_novedad' => $this->request->getPost('descripcion_novedad'),
             'motivo_baja'         => $this->request->getPost('motivo_baja'),
             'ubicacion_destino'   => $this->request->getPost('ubicacion_destino'),
@@ -102,10 +132,14 @@ class Equipos extends BaseController
             $builder->where('fecha_creacion <=', $fechaHasta . ' 23:59:59');
         }
 
-        $data['registros']  = $builder->orderBy('id', 'DESC')->get()->getResultArray();
-        $data['busqueda']   = $busqueda;
-        $data['fechaDesde'] = $fechaDesde;
-        $data['fechaHasta'] = $fechaHasta;
+        $registros = $builder->orderBy('id', 'DESC')->get()->getResultArray();
+
+        $data['registros']      = $registros;
+        $data['totalFiltrados'] = count($registros);
+        $data['totalGeneral']   = (new EquipoModel())->countAllResults();
+        $data['busqueda']       = $busqueda;
+        $data['fechaDesde']     = $fechaDesde;
+        $data['fechaHasta']     = $fechaHasta;
 
         return view('equipos/bitacora', $data);
     }

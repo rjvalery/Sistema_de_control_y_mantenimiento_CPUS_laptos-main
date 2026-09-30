@@ -4,8 +4,13 @@
 
 <?= $this->section('content') ?>
 <div class="card shadow-sm border-0">
-    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
-        <h5 class="mb-0 fs-6"><i class="fa-solid fa-list me-2"></i>Bitácora de Portátiles</h5>
+    <div class="card-header bg-dark text-white d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+        <div class="d-flex align-items-center gap-2">
+            <h5 class="mb-0 fs-6"><i class="fa-solid fa-list me-2"></i>Bitácora de Portátiles</h5>
+            <span class="badge text-white fs-6 px-3 py-1 rounded-pill" style="background-color: #8b5cf6;">
+                <i class="fa-solid fa-laptop me-1"></i> <?= number_format($totalFiltrados ?? count($registros)) ?> Diagnosticadas
+            </span>
+        </div>
         <div>
             <a href="<?= base_url('portatiles/formulario') ?>" class="btn btn-primary btn-sm me-2"><i class="fa-solid fa-plus me-1"></i> Nuevo</a>
             <a href="<?= base_url('portatiles/evidencia') ?>" class="btn btn-warning btn-sm me-2 fw-semibold"><i class="fa-solid fa-camera me-1"></i> Subir Foto</a>
@@ -17,7 +22,7 @@
                 ], fn($val) => $val !== '');
                 $urlExcel = base_url('portatiles/exportar') . (!empty($paramsExcel) ? '?' . http_build_query($paramsExcel) : '');
             ?>
-            <a href="<?= $urlExcel ?>" class="btn btn-success btn-sm"><i class="fa-solid fa-file-excel me-1"></i> Excel</a>
+            <a href="<?= $urlExcel ?>" class="btn btn-success btn-sm"><i class="fa-solid fa-file-excel me-1"></i> Excel (<?= number_format($totalFiltrados ?? count($registros)) ?>)</a>
         </div>
     </div>
     <div class="card-body p-4">
@@ -46,6 +51,38 @@
                 <?php endif; ?>
             </div>
         </form>
+
+        <!-- INDICADOR / MÉTRICA DE PORTÁTILES DIAGNOSTICADAS -->
+        <div class="card bg-light border-0 shadow-sm mb-4">
+            <div class="card-body p-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="p-3 rounded-circle fs-4 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px; background-color: #f3e8ff; color: #7e22ce;">
+                        <i class="fa-solid fa-laptop"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted small text-uppercase fw-bold d-block">Cantidad de Portátiles Diagnosticadas</span>
+                        <h3 class="fw-bold mb-0 text-dark">
+                            <?= number_format($totalFiltrados ?? count($registros)) ?>
+                            <span class="fs-6 fw-normal text-muted">laptop(s) <?= (!empty($busqueda) || !empty($fechaDesde) || !empty($fechaHasta)) ? 'filtrada(s)' : 'registrada(s)' ?></span>
+                        </h3>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <?php if (!empty($busqueda) || !empty($fechaDesde) || !empty($fechaHasta)): ?>
+                        <span class="badge bg-warning-subtle text-dark border border-warning-subtle px-3 py-2 fw-semibold">
+                            <i class="fa-solid fa-filter me-1 text-warning"></i> Filtro activo: <?= number_format($totalFiltrados ?? count($registros)) ?> de <?= number_format($totalGeneral ?? count($registros)) ?> registros
+                        </span>
+                        <a href="<?= base_url('portatiles/bitacora') ?>" class="btn btn-outline-secondary btn-sm">
+                            <i class="fa-solid fa-xmark me-1"></i> Restablecer
+                        </a>
+                    <?php else: ?>
+                        <span class="badge bg-white text-muted border px-3 py-2">
+                            <i class="fa-solid fa-database me-1" style="color: #7e22ce;"></i> Total histórico en base de datos: <strong><?= number_format($totalGeneral ?? count($registros)) ?></strong>
+                        </span>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
 
         <div class="table-responsive">
             <table class="table table-striped table-hover table-bordered align-middle text-nowrap">
@@ -106,6 +143,10 @@
             </table>
         </div>
 
+    </div>
+    <div class="card-footer bg-light py-2 px-4 d-flex flex-wrap justify-content-between align-items-center small text-muted">
+        <span>Mostrando <strong><?= number_format($totalFiltrados ?? count($registros)) ?></strong> portátil(es) diagnosticada(s) <?= (!empty($busqueda) || !empty($fechaDesde) || !empty($fechaHasta)) ? '(filtradas de un total de ' . number_format($totalGeneral ?? count($registros)) . ')' : '' ?></span>
+        <span class="font-monospace">Bitácora Garantías Portátiles</span>
     </div>
 </div>
 <?= $this->endSection() ?>

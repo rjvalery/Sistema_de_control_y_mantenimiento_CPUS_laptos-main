@@ -76,6 +76,13 @@
                             <i class="fa-solid fa-boxes-stacked me-1"></i> Inventario
                         </a>
                     </li>
+                    <?php if (session('usuario_rol') === 'admin'): ?>
+                        <li class="nav-item">
+                            <a class="nav-link" href="<?= base_url('usuarios') ?>">
+                                <i class="fa-solid fa-users-gear me-1"></i> Usuarios
+                            </a>
+                        </li>
+                    <?php endif; ?>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fa-solid fa-user-shield me-1"></i>
@@ -84,6 +91,14 @@
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><span class="dropdown-item-text small text-muted"><?= esc(session('usuario_user') ?? '') ?> (<?= esc(session('usuario_rol') ?? 'analista') ?>)</span></li>
                             <li><hr class="dropdown-divider"></li>
+                            <?php if (session('usuario_rol') === 'admin'): ?>
+                                <li>
+                                    <a class="dropdown-item" href="<?= base_url('usuarios') ?>">
+                                        <i class="fa-solid fa-users-gear me-2 text-primary"></i> Gestión de Usuarios y Roles
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                            <?php endif; ?>
                             <li>
                                 <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalCambiarPasswordPropia">
                                     <i class="fa-solid fa-key me-2 text-warning"></i> Cambiar mi contraseña

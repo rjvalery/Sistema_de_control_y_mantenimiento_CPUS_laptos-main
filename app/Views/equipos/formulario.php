@@ -11,7 +11,7 @@
             </div>
             <div class="card-body p-4">
 
-                <form id="formGarantias" onsubmit="event.preventDefault(); return false;">
+                <form id="formGarantias" enctype="multipart/form-data" onsubmit="event.preventDefault(); return false;">
                     <?= csrf_field() ?>
                     <div class="row g-3">
                         
@@ -139,13 +139,28 @@
                         </div>
 
                         <!-- D. BAJA -->
-                        <div id="seccion_baja" class="col-12 d-none p-3 bg-light rounded border">
-                            <label class="form-label fw-bold">Motivo Baja *</label>
-                            <select name="motivo_baja" id="motivo_baja" class="form-select">
-                                <option value="">-- Seleccione --</option>
-                                <option value="Obsoleto">Obsoleto</option>
-                                <option value="No energiza">No energiza</option>
-                            </select>
+                        <div id="seccion_baja" class="col-12 d-none p-3 bg-light rounded border border-danger-subtle">
+                            <div class="fw-bold text-danger mb-2">
+                                <i class="fa-solid fa-trash-can me-2"></i>Información de Baja del Equipo
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Motivo Baja *</label>
+                                    <select name="motivo_baja" id="motivo_baja" class="form-select">
+                                        <option value="">-- Seleccione --</option>
+                                        <option value="Obsoleto">Obsoleto</option>
+                                        <option value="No energiza">No energiza</option>
+                                        <option value="Baja total">Baja total</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Serial del disco duro</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white text-muted"><i class="fa-solid fa-hard-drive"></i></span>
+                                        <input type="text" name="serial_disco_baja" id="serial_disco_baja" class="form-control" placeholder="Escriba el serial del disco duro...">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- 3. Ubicación Destino -->
@@ -162,50 +177,31 @@
 
                         <!-- 4. Adjuntar / Tomar Foto -->
                         <div class="col-12" id="contenedor_foto">
-                            <label class="form-label fw-bold" id="lbl_evidencia"><i class="fa-solid fa-camera me-1 text-primary"></i> Evidencia Fotográfica <span id="foto_asterisco" class="text-danger">*</span></label>
+                            <label class="form-label fw-bold" for="foto_equipo" id="lbl_evidencia">
+                                <i class="fa-solid fa-camera me-1 text-primary"></i> Evidencia Fotográfica <span id="foto_asterisco" class="text-danger">*</span>
+                            </label>
                             
-                            <div class="p-3 border rounded text-center bg-light" style="border-style: dashed !important; border-width: 2px !important; border-color: #0d6efd !important;">
-                                <!-- Input Cámara directa para móviles -->
-                                <input type="file" id="foto_camara_equipos" accept="image/*" capture="environment" 
-                                       style="position: absolute; opacity: 0; width: 0.1px; height: 0.1px; overflow: hidden; pointer-events: none;" 
-                                       onchange="manejarSeleccionFotoEquipos(this)">
+                            <input type="file" id="foto_equipo" name="foto_equipo" class="form-control" accept="image/*" capture="environment">
+                            
+                            <div id="upload-label" class="form-text text-muted mt-1">
+                                Toma una foto con la cámara del dispositivo o selecciona una imagen (JPG, PNG, WEBP, máx 4MB).
+                            </div>
 
-                                <!-- Input Galería / Archivos sin capture (funciona en 100% de dispositivos y navegadores) -->
-                                <input type="file" id="foto_galeria_equipos" accept="image/*" 
-                                       style="position: absolute; opacity: 0; width: 0.1px; height: 0.1px; overflow: hidden; pointer-events: none;" 
-                                       onchange="manejarSeleccionFotoEquipos(this)">
-
-                                <!-- Input principal para validación del formulario -->
-                                <input type="file" name="foto_equipo" id="foto_equipo" 
-                                       style="position: absolute; opacity: 0; width: 0.1px; height: 0.1px; overflow: hidden; pointer-events: none;" 
-                                       accept="image/*" required>
-
-                                <div class="d-flex flex-wrap justify-content-center gap-2 mb-2">
-                                    <label for="foto_camara_equipos" class="btn btn-primary fw-bold py-2 px-3 shadow-sm" style="cursor: pointer;">
-                                        <i class="fa-solid fa-camera me-2"></i> Abrir Cámara
-                                    </label>
-                                    <label for="foto_galeria_equipos" class="btn btn-outline-secondary fw-bold py-2 px-3 shadow-sm" style="cursor: pointer;">
-                                        <i class="fa-solid fa-images me-2"></i> Galería / Archivos
-                                    </label>
+                            <div id="preview-container" class="mt-3 text-center d-none">
+                                <div class="position-relative d-inline-block">
+                                    <img id="preview" src="#" alt="Previsualización de la foto" class="img-thumbnail shadow-sm rounded" style="max-height: 240px; max-width: 100%;">
+                                    <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 rounded-circle shadow" style="width: 28px; height: 28px; padding: 0;" title="Quitar foto" onclick="limpiarPrevisualizacion()">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
                                 </div>
-
-                                <div id="upload-label" class="form-text mt-1 text-muted fw-semibold">
-                                    Toma la foto directamente con la cámara o selecciónala de la galería.
-                                </div>
-
-                                <div id="preview-container" class="mt-3 text-center d-none">
-                                    <img id="preview" src="#" alt="Vista previa" class="img-thumbnail shadow-sm rounded" style="max-height: 220px; max-width: 100%;">
-                                    <div class="mt-2">
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1">
-                                            <i class="fa-solid fa-circle-check me-1"></i> Foto lista para enviar
-                                        </span>
-                                    </div>
+                                <div class="mt-1 small text-success fw-semibold">
+                                    <i class="fa-solid fa-circle-check me-1"></i> Foto seleccionada lista para enviar
                                 </div>
                             </div>
                         </div>
 
                         <div class="col-12 mt-4">
-                            <button type="button" class="btn btn-primary w-100 py-2 fs-6 fw-bold" id="btnGuardar" onclick="enviarFormulario()">
+                            <button type="button" class="btn btn-primary w-100 py-2 fs-6 fw-bold shadow-sm" id="btnGuardar" onclick="enviarFormulario()">
                                 <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Registro
                             </button>
                         </div>
@@ -282,138 +278,52 @@ function evaluarGestion(valor) {
         if (fotoAsterisco) {
             fotoAsterisco.innerHTML = '<span class="badge bg-secondary-subtle text-secondary fw-normal ms-1">(Opcional para Baja)</span>';
         }
-        if (uploadLabel && !fotoOptimBlobEquipos) {
-            uploadLabel.innerHTML = '<i class="fa-solid fa-circle-info text-info me-1"></i> Para equipos en baja la foto es opcional. Puedes guardar el registro sin anexar foto.';
+        if (uploadLabel) {
+            uploadLabel.textContent = 'Para equipos en baja la foto es opcional. Puedes guardar sin anexar imagen.';
         }
     } else {
         if (fotoPrincipal) {
-            fotoPrincipal.required = !fotoOptimBlobEquipos && (!fotoPrincipal.files || !fotoPrincipal.files[0]);
+            fotoPrincipal.required = true;
         }
         if (fotoAsterisco) {
             fotoAsterisco.innerHTML = '<span class="text-danger">*</span>';
         }
-        if (uploadLabel && !fotoOptimBlobEquipos) {
-            uploadLabel.innerText = 'Toma la foto directamente con la cámara o selecciónala de la galería.';
+        if (uploadLabel) {
+            uploadLabel.textContent = 'Toma una foto con la cámara del dispositivo o selecciona una imagen (JPG, PNG, WEBP, máx 4MB).';
         }
     }
 }
 
-// Manejo ultrarrápido de compresión y preparación de imagen
-let fotoOptimBlobEquipos = null;
-let optimizacionPromesaEquipos = null;
-
-function manejarSeleccionFotoEquipos(input) {
-    if (!input.files || !input.files[0]) return;
-    const principal = document.getElementById('foto_equipo');
-    if (principal) {
-        principal.required = false;
-        try {
-            if (window.DataTransfer) {
-                const dt = new DataTransfer();
-                dt.items.add(input.files[0]);
-                principal.files = dt.files;
-            }
-        } catch (e) {}
-    }
-    optimizarImagen(input);
-}
-
-function optimizarImagen(input) {
+// Previsualización ligera nativa en JavaScript (URL.createObjectURL)
+function inicializarPrevisualizacion() {
+    const inputFoto = document.getElementById('foto_equipo');
     const previewContainer = document.getElementById('preview-container');
     const preview = document.getElementById('preview');
-    const uploadLabel = document.getElementById('upload-label');
 
-    if (!input.files || !input.files[0]) {
-        fotoOptimBlobEquipos = null;
-        optimizacionPromesaEquipos = null;
-        return;
-    }
-
-    const file = input.files[0];
-
-    // 1. VISTA PREVIA INSTANTÁNEA (0 ms): el analista ve su foto al instante
-    const instantUrl = URL.createObjectURL(file);
-    preview.src = instantUrl;
-    previewContainer.classList.remove('d-none');
-    uploadLabel.innerHTML = '<span class="spinner-border spinner-border-sm text-primary me-1"></span> Optimizando peso en segundo plano...';
-
-    // 2. Compresión en segundo plano ultra-optimizada (Hardware / createImageBitmap ~50-100ms)
-    optimizacionPromesaEquipos = (async () => {
-        try {
-            const maxDim = 1000;
-            let canvas = document.createElement('canvas');
-            let ctx = canvas.getContext('2d');
-            let procesado = false;
-
-            if ('createImageBitmap' in window) {
-                try {
-                    const bitmap = await createImageBitmap(file, { resizeWidth: maxDim, resizeQuality: 'medium' });
-                    canvas.width = bitmap.width;
-                    canvas.height = bitmap.height;
-                    ctx.drawImage(bitmap, 0, 0);
-                    bitmap.close();
-                    procesado = true;
-                } catch (e1) {
-                    try {
-                        const bitmap = await createImageBitmap(file);
-                        let w = bitmap.width, h = bitmap.height;
-                        if (w > h && w > maxDim) {
-                            h = Math.round((h * maxDim) / w);
-                            w = maxDim;
-                        } else if (h > maxDim) {
-                            w = Math.round((w * maxDim) / h);
-                            h = maxDim;
-                        }
-                        canvas.width = w;
-                        canvas.height = h;
-                        ctx.drawImage(bitmap, 0, 0, w, h);
-                        bitmap.close();
-                        procesado = true;
-                    } catch (e2) {
-                        procesado = false;
-                    }
+    if (inputFoto) {
+        inputFoto.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                if (preview) {
+                    preview.src = URL.createObjectURL(file);
                 }
-            }
-
-            if (!procesado) {
-                await new Promise((resolve) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        let w = img.width, h = img.height;
-                        if (w > h && w > maxDim) {
-                            h = Math.round((h * maxDim) / w);
-                            w = maxDim;
-                        } else if (h > maxDim) {
-                            w = Math.round((w * maxDim) / h);
-                            h = maxDim;
-                        }
-                        canvas.width = w;
-                        canvas.height = h;
-                        ctx.drawImage(img, 0, 0, w, h);
-                        resolve();
-                    };
-                    img.onerror = () => resolve();
-                    img.src = instantUrl;
-                });
-            }
-
-            const blob = await new Promise((resolve) => {
-                canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.65);
-            });
-
-            if (blob) {
-                fotoOptimBlobEquipos = blob;
-                uploadLabel.innerHTML = `<i class="fa-solid fa-circle-check text-success me-1"></i> Foto lista (${(blob.size / 1024).toFixed(0)} KB)`;
+                if (previewContainer) {
+                    previewContainer.classList.remove('d-none');
+                }
             } else {
-                fotoOptimBlobEquipos = file;
-                uploadLabel.innerHTML = '<i class="fa-solid fa-circle-check text-success me-1"></i> Foto cargada.';
+                limpiarPrevisualizacion();
             }
-        } catch (err) {
-            fotoOptimBlobEquipos = file;
-            uploadLabel.innerHTML = '<i class="fa-solid fa-circle-check text-success me-1"></i> Foto lista.';
-        }
-        return fotoOptimBlobEquipos;
-    })();
+        });
+    }
+}
+
+function limpiarPrevisualizacion() {
+    const inputFoto = document.getElementById('foto_equipo');
+    const previewContainer = document.getElementById('preview-container');
+    const preview = document.getElementById('preview');
+    if (inputFoto) inputFoto.value = '';
+    if (preview) preview.src = '#';
+    if (previewContainer) previewContainer.classList.add('d-none');
 }
 
 function mostrarModal(icono, titulo, mensaje) {
@@ -432,7 +342,7 @@ async function enviarFormulario() {
     if (tipoGestion === 'Baja') {
         if (principal) principal.required = false;
     } else {
-        if (principal && !fotoOptimBlobEquipos && (!principal.files || !principal.files[0])) {
+        if (principal && (!principal.files || !principal.files[0])) {
             principal.required = true;
         }
     }
@@ -446,16 +356,13 @@ async function enviarFormulario() {
     btnSubmit.disabled = true;
     btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Guardando...';
 
-    if (optimizacionPromesaEquipos) {
-        try {
-            await optimizacionPromesaEquipos;
-        } catch (e) {}
-    }
-
     const formData = new FormData(form);
 
-    if (fotoOptimBlobEquipos) {
-        formData.set('foto_equipo', fotoOptimBlobEquipos, 'foto_evidencia.jpg');
+    if (tipoGestion === 'Baja') {
+        const sdBaja = document.getElementById('serial_disco_baja')?.value?.trim();
+        if (sdBaja) {
+            formData.set('serial_disco', sdBaja);
+        }
     }
 
     fetch('<?= base_url('equipos/guardar') ?>', {
@@ -468,23 +375,17 @@ async function enviarFormulario() {
     .then(r => r.json())
     .then(data => {
         if (data.status === 'success') {
-            const mensajeExito = (fotoOptimBlobEquipos || (principal && principal.files && principal.files.length > 0))
-                ? 'El registro y la foto se han guardado correctamente.'
-                : 'El registro se ha guardado correctamente sin anexar foto.';
-            mostrarModal('<i class="fa-solid fa-circle-check text-success"></i>', '¡Guardado con éxito!', mensajeExito);
+            mostrarModal('<i class="fa-solid fa-circle-check text-success"></i>', '¡Guardado con éxito!', data.message || 'El registro se ha guardado correctamente.');
             form.reset();
-            fotoOptimBlobEquipos = null;
-            optimizacionPromesaEquipos = null;
+            limpiarPrevisualizacion();
             if (principal) principal.required = true;
             const asterisco = document.getElementById('foto_asterisco');
             if (asterisco) asterisco.innerHTML = '<span class="text-danger">*</span>';
             ocultarTodos();
-            document.getElementById('preview-container').classList.add('d-none');
-            document.getElementById('upload-label').innerText = 'Adjunta o captura la foto del equipo.';
             const feedbackDiv = document.getElementById('inventario_feedback');
             if (feedbackDiv) feedbackDiv.innerHTML = '';
         } else {
-            mostrarModal('<i class="fa-solid fa-circle-xmark text-danger"></i>', 'Error al guardar', data.message);
+            mostrarModal('<i class="fa-solid fa-circle-xmark text-danger"></i>', 'Error al guardar', data.message || 'No se pudo guardar el registro.');
         }
     })
     .catch(() => {
@@ -498,6 +399,8 @@ async function enviarFormulario() {
 
 // Sincronización en tiempo real con inventario al tipear ID o Serial
 document.addEventListener('DOMContentLoaded', function() {
+    inicializarPrevisualizacion();
+
     const placaInput = document.getElementById('placa_id');
     const spinnerPlaca = document.getElementById('spinner_placa');
     const feedbackDiv = document.getElementById('inventario_feedback');

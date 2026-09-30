@@ -148,6 +148,11 @@ class InventarioGeneralModel extends Model
             // Ignorar si la tabla aún se está construyendo
         }
 
+        // Asegurar que registros antiguos tengan un created_at válido para filtros de tiempo
+        try {
+            $this->db->query("UPDATE `inventario_general` SET `created_at` = COALESCE(`fecha_intervencion`, NOW()) WHERE `created_at` IS NULL;");
+        } catch (\Throwable $e) {}
+
         self::$tablaAsegurada = true;
     }
 
@@ -385,22 +390,65 @@ class InventarioGeneralModel extends Model
     }
 
     /**
-     * Retorna las estadísticas consolidadas del inventario para el dashboard.
+     * Retorna las estadísticas consolidadas del inventario para el dashboard,
+     * utilizando consultas agregadas directas (COUNT) en la base de datos sin cargar objetos.
+     *
+     * @param string|null $fechaDesde Fecha inicial en formato Y-m-d H:i:s
+     * @param string|null $fechaHasta Fecha final en formato Y-m-d H:i:s
+     * @return array Resumen estadístico
      */
-    public function obtenerEstadisticasInventario(): array
+    public function obtenerEstadisticasInventario(?string $fechaDesde = null, ?string $fechaHasta = null): array
     {
         $this->asegurarTabla();
 
-        $totalCargados = (int) $this->countAllResults();
-        
-        $intervenidosEnInventario = (int) $this->where('intervenido', 1)->countAllResults();
-        $pendientesEnInventario  = max(0, $totalCargados - $intervenidosEnInventario);
+        if ($fechaDesde === null || $fechaHasta === null) {
+            $row = $this->builder()
+                ->select('COUNT(*) as total_cargados, SUM(CASE WHEN intervenido = 1 THEN 1 ELSE 0 END) as total_intervenidos')
+                ->get()
+                ->getRowArray();
+
+            $totalCargados = (int) ($row['total_cargados'] ?? 0);
+            $intervenidos  = (int) ($row['total_intervenidos'] ?? 0);
+            $pendientes    = max(0, $totalCargados - $intervenidos);
+            $porcentaje    = $totalCargados > 0 ? round(($intervenidos / $totalCargados) * 100, 1) : 0;
+
+            return [
+                'totalCargados'   => $totalCargados,
+                'cargadosPeriodo' => $totalCargados,
+                'intervenidos'    => $intervenidos,
+                'pendientes'      => $pendientes,
+                'porcentaje'      => $porcentaje,
+            ];
+        }
+
+        // Con filtro temporal mediante COUNT directo
+        $rowCargados = $this->builder()
+            ->select('COUNT(*) as cargados')
+            ->where('created_at >=', $fechaDesde)
+            ->where('created_at <=', $fechaHasta)
+            ->get()
+            ->getRowArray();
+        $cargadosPeriodo = (int) ($rowCargados['cargados'] ?? 0);
+
+        $rowInterv = $this->builder()
+            ->select('COUNT(*) as intervenidos')
+            ->where('intervenido', 1)
+            ->where('fecha_intervencion >=', $fechaDesde)
+            ->where('fecha_intervencion <=', $fechaHasta)
+            ->get()
+            ->getRowArray();
+        $intervenidosPeriodo = (int) ($rowInterv['intervenidos'] ?? 0);
+
+        $totalCargados = max($cargadosPeriodo, $intervenidosPeriodo);
+        $pendientes    = max(0, $totalCargados - $intervenidosPeriodo);
+        $porcentaje    = $totalCargados > 0 ? round(($intervenidosPeriodo / $totalCargados) * 100, 1) : ($intervenidosPeriodo > 0 ? 100.0 : 0.0);
 
         return [
-            'totalCargados'  => $totalCargados,
-            'intervenidos'   => $intervenidosEnInventario,
-            'pendientes'     => $pendientesEnInventario,
-            'porcentaje'     => $totalCargados > 0 ? round(($intervenidosEnInventario / $totalCargados) * 100, 1) : 0,
+            'totalCargados'   => $totalCargados,
+            'cargadosPeriodo' => $cargadosPeriodo,
+            'intervenidos'    => $intervenidosPeriodo,
+            'pendientes'      => $pendientes,
+            'porcentaje'      => $porcentaje,
         ];
     }
 
@@ -675,6 +723,75 @@ class InventarioGeneralModel extends Model
             ->getResultArray();
 
         return array_column($filas, 'num_traslado');
+    }
+
+    /**
+     * Cuenta directamente el total de traslados únicos registrados mediante una query agregada COUNT(DISTINCT).
+     */
+    public function contarTrasladosRegistrados(): int
+    {
+        $this->asegurarTabla();
+        $row = $this->builder()
+            ->select('COUNT(DISTINCT num_traslado) as total')
+            ->where('num_traslado IS NOT NULL')
+            ->where('num_traslado !=', '')
+            ->get()
+            ->getRowArray();
+
+        return (int) ($row['total'] ?? 0);
+    }
+
+    /**
+     * Retorna el listado de las últimas 8 máquinas que han entrado y sido intervenidas en el sistema,
+     * seleccionando únicamente las columnas necesarias para pantalla sin cargar objetos completos en memoria.
+     *
+     * @param int $limite Cantidad máxima de registros a retornar (estrictamente 8)
+     * @param string|null $fechaDesde Fecha inicial en formato Y-m-d H:i:s
+     * @param string|null $fechaHasta Fecha final en formato Y-m-d H:i:s
+     * @return array<int, array<string, mixed>>
+     */
+    public function obtenerMaquinasIntervenidasRecientes(int $limite = 8, ?string $fechaDesde = null, ?string $fechaHasta = null): array
+    {
+        $this->asegurarTabla();
+
+        $builder = $this->builder()
+            ->select('id, identificador_1, identificador_2, placa_id, serial, num_traslado, ref_principal, modelo, descripcion, modulo_intervencion, analista_intervencion, fecha_intervencion')
+            ->where('intervenido', 1);
+
+        if ($fechaDesde !== null && $fechaHasta !== null) {
+            $builder->where('fecha_intervencion >=', $fechaDesde)
+                    ->where('fecha_intervencion <=', $fechaHasta);
+        }
+
+        $intervenidas = $builder->orderBy('fecha_intervencion', 'DESC')
+            ->orderBy('id', 'DESC')
+            ->limit($limite)
+            ->get()
+            ->getResultArray();
+
+        if (!empty($intervenidas)) {
+            return $intervenidas;
+        }
+
+        // Respaldo de visualización si no se ha sincronizado inventario_general
+        if ($this->db->tableExists('equipos')) {
+            $builderEq = $this->db->table('equipos')
+                ->select('id, placa_id as identificador_1, serial_disco as identificador_2, num_traslado, nombre_analista as analista_intervencion, fecha_creacion as fecha_intervencion, "Diagnóstico CPU" as modulo_intervencion, tipo_gestion as descripcion, "Intervenido" as estado, 1 as intervenido')
+                ->orderBy('id', 'DESC')
+                ->limit($limite);
+
+            if ($fechaDesde !== null && $fechaHasta !== null) {
+                $builderEq->where('fecha_creacion >=', $fechaDesde)
+                          ->where('fecha_creacion <=', $fechaHasta);
+            }
+
+            $recientesEq = $builderEq->get()->getResultArray();
+            if (!empty($recientesEq)) {
+                return $recientesEq;
+            }
+        }
+
+        return [];
     }
 }
 

@@ -250,10 +250,14 @@ class Portatiles extends BaseController
             $builder->where('created_at <=', $fechaHasta . ' 23:59:59');
         }
 
-        $data['registros']  = $builder->orderBy('id', 'DESC')->get()->getResultArray();
-        $data['busqueda']   = $busqueda;
-        $data['fechaDesde'] = $fechaDesde;
-        $data['fechaHasta'] = $fechaHasta;
+        $registros = $builder->orderBy('id', 'DESC')->get()->getResultArray();
+
+        $data['registros']      = $registros;
+        $data['totalFiltrados'] = count($registros);
+        $data['totalGeneral']   = (new PortatilModel())->countAllResults();
+        $data['busqueda']       = $busqueda;
+        $data['fechaDesde']     = $fechaDesde;
+        $data['fechaHasta']     = $fechaHasta;
 
         return view('portatiles/bitacora', $data);
     }

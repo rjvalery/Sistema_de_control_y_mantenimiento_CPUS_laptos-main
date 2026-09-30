@@ -111,10 +111,14 @@ class Soplado extends BaseController
             $builder->where($colFecha . ' <=', $fechaHasta . ' 23:59:59');
         }
 
-        $data['registros']  = $builder->orderBy('id', 'DESC')->get()->getResultArray();
-        $data['busqueda']   = $busqueda;
-        $data['fechaDesde'] = $fechaDesde;
-        $data['fechaHasta'] = $fechaHasta;
+        $registros = $builder->orderBy('id', 'DESC')->get()->getResultArray();
+
+        $data['registros']      = $registros;
+        $data['totalFiltrados'] = count($registros);
+        $data['totalGeneral']   = (new SopladoModel())->countAllResults();
+        $data['busqueda']       = $busqueda;
+        $data['fechaDesde']     = $fechaDesde;
+        $data['fechaHasta']     = $fechaHasta;
 
         return view('soplado/bitacora', $data);
     }

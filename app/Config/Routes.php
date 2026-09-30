@@ -14,8 +14,11 @@ $routes->get('logout', 'Auth::logout', ['filter' => 'auth']);
 $routes->group('', ['filter' => 'auth'], static function ($routes) {
     $routes->get('/', 'Dashboard::index');
     $routes->get('dashboard', 'Dashboard::index');
+    $routes->get('dashboard/metricas', 'Dashboard::metricas');
 
 
+    // Módulo de Gestión de Usuarios y Roles
+    $routes->get('usuarios', 'Usuarios::index');
     $routes->post('usuarios/cambiar-rol', 'Usuarios::cambiarRol');
     $routes->post('usuarios/crear', 'Usuarios::crear');
     $routes->post('usuarios/reset-password', 'Usuarios::resetPassword');
