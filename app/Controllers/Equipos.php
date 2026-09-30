@@ -77,6 +77,7 @@ class Equipos extends BaseController
             : (string) ($this->request->getPost('nombre_analista') ?: session('usuario_nombre'));
 
         $serialDisco = trim((string) ($this->request->getPost('serial_disco') ?: $this->request->getPost('serial_disco_baja')));
+        $descripcionNovedad = trim((string) ($this->request->getPost('descripcion_novedad') ?: $this->request->getPost('descripcion_it')));
 
         $data = [
             'nombre_analista'     => $nombreAnalista,
@@ -89,7 +90,7 @@ class Equipos extends BaseController
             'que_va_intervenir'   => $this->request->getPost('que_va_intervenir'),
             'origen_pieza'        => $this->request->getPost('origen_pieza'),
             'serial_disco'        => $serialDisco !== '' ? $serialDisco : null,
-            'descripcion_novedad' => $this->request->getPost('descripcion_novedad'),
+            'descripcion_novedad' => $descripcionNovedad !== '' ? $descripcionNovedad : null,
             'motivo_baja'         => $this->request->getPost('motivo_baja'),
             'ubicacion_destino'   => $this->request->getPost('ubicacion_destino'),
             'foto_equipo'         => $fotoRuta,

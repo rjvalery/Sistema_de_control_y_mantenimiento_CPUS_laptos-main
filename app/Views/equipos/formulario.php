@@ -68,6 +68,7 @@
                                 <option value="Intervencion">Intervención</option>
                                 <option value="Novedad">Novedad</option>
                                 <option value="Baja">Baja</option>
+                                <option value="IT">IT</option>
                             </select>
                         </div>
 
@@ -163,6 +164,15 @@
                             </div>
                         </div>
 
+                        <!-- E. GESTIÓN IT -->
+                        <div id="seccion_it" class="col-12 d-none p-3 bg-light rounded border border-primary-subtle">
+                            <div class="fw-bold text-primary mb-2">
+                                <i class="fa-solid fa-laptop-code me-2"></i>Información de Gestión IT
+                            </div>
+                            <label class="form-label fw-bold">Escriba la información de la gestión IT *</label>
+                            <textarea name="descripcion_it" id="descripcion_it" class="form-control" rows="3" placeholder="Detalle la información o procedimiento realizado en IT..."></textarea>
+                        </div>
+
                         <!-- 3. Ubicación Destino -->
                         <div class="col-12">
                             <label class="form-label fw-bold">Ubicación destino *</label>
@@ -232,13 +242,15 @@
 <?= $this->section('scripts') ?>
 <script>
 function ocultarTodos() {
-    ['seccion_diagnostico', 'seccion_intervencion', 'seccion_novedad', 'seccion_baja'].forEach(id => {
+    ['seccion_diagnostico', 'seccion_intervencion', 'seccion_novedad', 'seccion_baja', 'seccion_it'].forEach(id => {
         const sec = document.getElementById(id);
-        sec.classList.add('d-none');
-        sec.querySelectorAll('select, input, textarea').forEach(inp => {
-            inp.required = false;
-            inp.value = '';
-        });
+        if (sec) {
+            sec.classList.add('d-none');
+            sec.querySelectorAll('select, input, textarea').forEach(inp => {
+                inp.required = false;
+                inp.value = '';
+            });
+        }
     });
 }
 
@@ -268,6 +280,9 @@ function evaluarGestion(valor) {
         if (selectDestino && !selectDestino.value) {
             selectDestino.value = 'Sala Bajas';
         }
+    } else if (valor === 'IT') {
+        document.getElementById('seccion_it').classList.remove('d-none');
+        document.getElementById('descripcion_it').required = true;
     }
 
     // Si la gestión es Baja, la foto es opcional; en otros tipos sigue siendo obligatoria
