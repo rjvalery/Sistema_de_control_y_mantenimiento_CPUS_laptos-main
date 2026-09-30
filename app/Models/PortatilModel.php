@@ -19,7 +19,7 @@ class PortatilModel extends Model
         'diagnostico_laptop_intervenido', 'garantia', 'porque_solicita_garantia',
         'numero_ticket', 'estado_final_equipo', 'indique_pieza', 'indique_fru',
         'pieza_intervenida', 'origen_pieza', 'motivo_baja', 'serial_disco', 'foto_ruta',
-        'created_at', 'fecha_creacion'
+        'created_at'
     ];
 
     protected $validationRules  = [
@@ -44,11 +44,11 @@ class PortatilModel extends Model
         $builder = $this->builder();
 
         if ($desde !== null && trim($desde) !== '') {
-            $builder->where('fecha_creacion >=', $desde);
+            $builder->where('created_at >=', $desde);
         }
 
         if ($hasta !== null && trim($hasta) !== '') {
-            $builder->where('fecha_creacion <=', $hasta);
+            $builder->where('created_at <=', $hasta);
         }
 
         return (int) $builder->countAllResults();

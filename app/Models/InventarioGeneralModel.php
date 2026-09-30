@@ -472,8 +472,8 @@ class InventarioGeneralModel extends Model
 
         // Columnas canónicas de fecha de creación indexadas
         $fechaColEq = 'eq.fecha_creacion';
-        $fechaColSp = 'sp.fecha_creacion';
-        $fechaColGp = 'gp.fecha_creacion';
+        $fechaColSp = 'sp.created_at';
+        $fechaColGp = 'gp.created_at';
 
         // 1. Mapeo y cruce con tabla `equipos` (Diagnóstico CPUs / Escritorio)
         if ($db->tableExists('equipos')) {
@@ -592,8 +592,8 @@ class InventarioGeneralModel extends Model
 
         // Columnas canónicas de fecha de creación indexadas
         $fechaColEq = 'eq.fecha_creacion';
-        $fechaColSp = 'sp.fecha_creacion';
-        $fechaColGp = 'gp.fecha_creacion';
+        $fechaColSp = 'sp.created_at';
+        $fechaColGp = 'gp.created_at';
 
         $whereTraslado = '';
         if (!empty($numTraslado)) {

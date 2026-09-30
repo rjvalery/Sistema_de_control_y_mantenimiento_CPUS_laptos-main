@@ -98,7 +98,6 @@ class Portatiles extends BaseController
             'origen_pieza'                   => ($estadoActual === 'Reparado' && $reparadoPor) ? $reparadoPor : $this->request->getPost('origen_pieza'),
             'motivo_baja'                    => $this->request->getPost('motivo_baja'),
             'serial_disco'                   => $this->request->getPost('serial_disco'),
-            'fecha_creacion'                 => date('Y-m-d H:i:s'),
             'created_at'                     => date('Y-m-d H:i:s'),
         ];
 
@@ -195,7 +194,6 @@ class Portatiles extends BaseController
                     'placa_id_equipo' => $placaId,
                     'tipo_gestion'    => 'Diagnóstico',
                     'foto_ruta'       => $fotoRuta,
-                    'fecha_creacion'  => date('Y-m-d H:i:s'),
                     'created_at'      => date('Y-m-d H:i:s'),
                 ]);
             }

@@ -17,7 +17,7 @@ class SopladoModel extends Model
         'nombre_analista', 'num_traslado', 'placa_id', 'energiza', 
         'da_video', 'detecta_disco', 'ingreso_bios', 'pasta_termica', 
         'maquina_contenia', 'gel_cucarachas', 'foto_ruta',
-        'created_at', 'fecha_creacion'
+        'created_at'
     ];
 
     protected $validationRules  = [
@@ -32,11 +32,11 @@ class SopladoModel extends Model
         $builder = $this->builder();
 
         if ($desde !== null && trim($desde) !== '') {
-            $builder->where('fecha_creacion >=', $desde);
+            $builder->where('created_at >=', $desde);
         }
 
         if ($hasta !== null && trim($hasta) !== '') {
-            $builder->where('fecha_creacion <=', $hasta);
+            $builder->where('created_at <=', $hasta);
         }
 
         return (int) $builder->countAllResults();
@@ -59,11 +59,11 @@ class SopladoModel extends Model
         }
 
         if ($fechaDesde !== null && trim($fechaDesde) !== '') {
-            $builder->where('fecha_creacion >=', trim($fechaDesde) . ' 00:00:00');
+            $builder->where('created_at >=', trim($fechaDesde) . ' 00:00:00');
         }
 
         if ($fechaHasta !== null && trim($fechaHasta) !== '') {
-            $builder->where('fecha_creacion <=', trim($fechaHasta) . ' 23:59:59');
+            $builder->where('created_at <=', trim($fechaHasta) . ' 23:59:59');
         }
 
         return $builder->orderBy('id', 'DESC')->get()->getResultArray();

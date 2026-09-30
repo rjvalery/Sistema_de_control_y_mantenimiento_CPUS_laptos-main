@@ -86,25 +86,30 @@ class Soplado extends BaseController
             'maquina_contenia' => $maquinaContenia,
             'gel_cucarachas'   => $gelCucarachas,
             'foto_ruta'        => $fotoRuta,
-            'fecha_creacion'   => date('Y-m-d H:i:s'),
             'created_at'       => date('Y-m-d H:i:s'),
         ];
 
-        if ($this->sopladoModel->insert($data)) {
-            // Sincronizar y descontar de pendientes en inventario general
-            $this->inventarioModel->marcarIntervenido((string)$placaId, 'soplado', $nombreAnalista);
+        try {
+            if ($this->sopladoModel->insert($data)) {
+                // Sincronizar y descontar de pendientes en inventario general
+                $this->inventarioModel->marcarIntervenido((string)$placaId, 'soplado', $nombreAnalista);
+
+                if ($isAjax) {
+                    return $this->respondSuccess([], 'Registro y evidencia guardados correctamente.');
+                }
+                return redirect()->to(base_url('soplado/formulario'))->with('msg', 'Registro y evidencia guardados correctamente.');
+            }
 
             if ($isAjax) {
-                return $this->respondSuccess([], 'Registro y evidencia guardados correctamente.');
+                return $this->respondError('Error al guardar en la base de datos.');
             }
-            return redirect()->to(base_url('soplado/formulario'))->with('msg', 'Registro y evidencia guardados correctamente.');
-        }
 
-        if ($isAjax) {
-            return $this->respondError('Error al guardar en la base de datos.');
+            return redirect()->back()->withInput()->with('error', 'Error al guardar en base de datos.');
+        } catch (\Throwable $e) {
+            log_message('error', 'Error al registrar soplado: ' . $e->getMessage());
+            $msg = 'Error al registrar en la base de datos: ' . $e->getMessage();
+            return $isAjax ? $this->respondError($msg) : redirect()->back()->withInput()->with('error', $msg);
         }
-
-        return redirect()->back()->withInput()->with('error', 'Error al guardar en base de datos.');
     }
 
     public function bitacora(): string
@@ -160,7 +165,7 @@ class Soplado extends BaseController
 
             $line = [
                 $row['id'],
-                $row['fecha_creacion'] ?? ($row['created_at'] ?? ''),
+                $row['created_at'] ?? ($row['fecha_creacion'] ?? ''),
                 '"' . str_replace('"', '""', (string)($row['nombre_analista'] ?? '')) . '"',
                 '"' . str_replace('"', '""', (string)($row['num_traslado'] ?? '')) . '"',
                 '"' . str_replace('"', '""', (string)($row['placa_id'] ?? '')) . '"',

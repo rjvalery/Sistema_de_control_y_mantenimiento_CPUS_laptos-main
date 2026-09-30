@@ -63,18 +63,13 @@ class Equipos extends BaseController
             return $this->respondError($msg);
         }
 
-        // Configuración de la ruta destino fuera del repositorio Git (C:\Users\LENOVO\Pictures\fotos\diagnostico)
-        $configRuta  = (string) (env('app.rutaDiagnosticos') ?: 'C:/Users/LENOVO/Pictures/fotos/diagnostico/');
-        $rutaDestino = rtrim(str_replace('\\', '/', $configRuta), '/') . '/';
-
+        // Subida y organización de evidencias mediante UploadService (Año/Mes/Día y nombrado por placa_id)
         $fotoRuta = null;
         if ($tieneArchivo) {
-            if (!is_dir($rutaDestino)) {
-                mkdir($rutaDestino, 0755, true);
+            $fotoRuta = $this->uploadService->guardarEvidencia($foto, $placaId, 'diagnostico');
+            if (!$fotoRuta && !$esBaja) {
+                return $this->respondError('No se pudo guardar la fotografía de evidencia.');
             }
-            $nombreGenerado = $foto->getRandomName();
-            $foto->move($rutaDestino, $nombreGenerado);
-            $fotoRuta = $rutaDestino . $nombreGenerado;
         }
 
         $nombreAnalista = (session('usuario_rol') === 'analista')
@@ -101,14 +96,19 @@ class Equipos extends BaseController
             'fecha_creacion'      => date('Y-m-d H:i:s')
         ];
 
-        if ($this->equipoModel->insert($data)) {
-            // Sincronizar y descontar de pendientes en inventario general
-            $this->inventarioModel->marcarIntervenido((string)$placaId, 'diagnostico', $nombreAnalista);
+        try {
+            if ($this->equipoModel->insert($data)) {
+                // Sincronizar y descontar de pendientes en inventario general
+                $this->inventarioModel->marcarIntervenido((string)$placaId, 'diagnostico', $nombreAnalista);
 
-            return $this->respondSuccess([], 'Guardado correctamente');
+                return $this->respondSuccess([], 'Guardado correctamente');
+            }
+
+            return $this->respondError('Error al guardar en base de datos');
+        } catch (\Throwable $e) {
+            log_message('error', 'Error al guardar diagnóstico: ' . $e->getMessage());
+            return $this->respondError('Error al guardar en base de datos: ' . $e->getMessage());
         }
-
-        return $this->respondError('Error al guardar en base de datos');
     }
 
     public function bitacora(): string

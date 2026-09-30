@@ -37,7 +37,10 @@ class UploadService
         $targetDir = "{$baseDir}/{$anio}/{$nombreMes}/{$dia}/";
 
         if (!is_dir($targetDir)) {
-            mkdir($targetDir, 0755, true);
+            if (!@mkdir($targetDir, 0755, true) && !is_dir($targetDir)) {
+                log_message('error', "UploadService: No se pudo crear el directorio '{$targetDir}'.");
+                return null;
+            }
         }
 
         $ext = $file->getClientExtension() ?: 'jpg';
@@ -53,12 +56,16 @@ class UploadService
         }
 
         $destPath = $targetDir . $fileName;
-        $file->move($targetDir, $fileName);
 
-        // Optimización de respaldo en servidor si el archivo recibido supera 1.5MB
-        $this->optimizarSiEsPesado($destPath);
-
-        return $destPath;
+        try {
+            $file->move($targetDir, $fileName);
+            // Optimización de respaldo en servidor si el archivo recibido supera 1.5MB
+            $this->optimizarSiEsPesado($destPath);
+            return $destPath;
+        } catch (\Throwable $e) {
+            log_message('error', "UploadService: Error moviendo archivo a '{$destPath}': " . $e->getMessage());
+            return null;
+        }
     }
 
     /**
