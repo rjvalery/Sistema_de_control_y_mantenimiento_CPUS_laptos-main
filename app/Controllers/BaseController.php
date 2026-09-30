@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use CodeIgniter\Controller;
@@ -21,25 +23,45 @@ use Psr\Log\LoggerInterface;
 abstract class BaseController extends Controller
 {
     /**
-     * Be sure to declare properties for any property fetch you initialized.
-     * The creation of dynamic property is deprecated in PHP 8.2.
+     * Helpers cargados para todos los controladores que extienden BaseController.
      */
-
-    // protected $session;
+    protected $helpers = ['url', 'form'];
 
     /**
      * @return void
      */
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
     {
-        // Load here all helpers you want to be available in your controllers that extend BaseController.
-        // Caution: Do not put the this below the parent::initController() call below.
-        // $this->helpers = ['form', 'url'];
-
         // Caution: Do not edit this line.
         parent::initController($request, $response, $logger);
+    }
 
-        // Preload any models, libraries, etc, here.
-        // $this->session = service('session');
+    /**
+     * Retorna una respuesta JSON estandarizada de éxito.
+     */
+    protected function respondSuccess(array $data = [], string $message = '', int $code = 200): ResponseInterface
+    {
+        $payload = array_merge(['status' => 'success'], $data);
+        if ($message !== '') {
+            $payload['message'] = $message;
+        }
+
+        return $this->response->setStatusCode($code)->setJSON($payload);
+    }
+
+    /**
+     * Retorna una respuesta JSON estandarizada de error.
+     */
+    protected function respondError(string $message, int $code = 400, array $errors = []): ResponseInterface
+    {
+        $payload = [
+            'status'  => 'error',
+            'message' => $message,
+        ];
+        if (!empty($errors)) {
+            $payload['errors'] = $errors;
+        }
+
+        return $this->response->setStatusCode($code)->setJSON($payload);
     }
 }

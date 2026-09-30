@@ -5,15 +5,18 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\InventarioGeneralModel;
+use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
+use Psr\Log\LoggerInterface;
 
 class Inventario extends BaseController
 {
     protected InventarioGeneralModel $inventarioModel;
 
-    public function __construct()
+    public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger): void
     {
-        $this->inventarioModel = new InventarioGeneralModel();
+        parent::initController($request, $response, $logger);
+        $this->inventarioModel = model(InventarioGeneralModel::class);
     }
 
     /**

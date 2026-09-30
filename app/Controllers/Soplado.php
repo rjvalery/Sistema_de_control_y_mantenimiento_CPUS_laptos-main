@@ -1,47 +1,68 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Models\SopladoModel;
 use App\Models\UsuarioModel;
 use App\Models\InventarioGeneralModel;
 use App\Services\UploadService;
+use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
+use Psr\Log\LoggerInterface;
 
 class Soplado extends BaseController
 {
-    protected $sopladoModel;
-    protected $usuarioModel;
-    protected $uploadService;
-    protected $inventarioModel;
+    protected SopladoModel $sopladoModel;
+    protected UsuarioModel $usuarioModel;
+    protected UploadService $uploadService;
+    protected InventarioGeneralModel $inventarioModel;
 
-    public function __construct()
+    public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger): void
     {
-        $this->sopladoModel    = new SopladoModel();
-        $this->usuarioModel    = new UsuarioModel();
+        parent::initController($request, $response, $logger);
+        $this->sopladoModel    = model(SopladoModel::class);
+        $this->usuarioModel    = model(UsuarioModel::class);
+        $this->inventarioModel = model(InventarioGeneralModel::class);
         $this->uploadService   = new UploadService();
-        $this->inventarioModel = new InventarioGeneralModel();
     }
 
-    public function formulario()
+    public function formulario(): string
     {
-        $data['analistas'] = $this->usuarioModel->where('rol', 'analista')->where('activo', 1)->orderBy('nombre', 'ASC')->findAll();
+        $data['analistas'] = $this->usuarioModel->obtenerAnalistasActivos();
         return view('soplado/formulario', $data);
     }
 
-    public function guardar()
+    public function guardar(): ResponseInterface
     {
-        $placaId  = $this->request->getPost('placa_id');
-        $file     = $this->request->getFile('foto_equipo');
+        $placaId = (string) $this->request->getPost('placa_id');
+        $file    = $this->request->getFile('foto_equipo');
+        $isAjax  = $this->request->isAJAX() || $this->request->getHeaderLine('X-Requested-With') === 'XMLHttpRequest';
+
+        $rules = [
+            'placa_id'    => 'required|min_length[2]|max_length[100]',
+            'foto_equipo' => [
+                'label'  => 'Evidencia fotográfica',
+                'rules'  => 'uploaded[foto_equipo]|is_image[foto_equipo]|mime_in[foto_equipo,image/jpg,image/jpeg,image/png,image/webp]|max_size[foto_equipo,4096]',
+                'errors' => [
+                    'uploaded' => 'La foto de evidencia es obligatoria.',
+                    'is_image' => 'El archivo seleccionado debe ser una imagen válida.',
+                    'mime_in'  => 'El formato de imagen debe ser JPG, JPEG, PNG o WEBP.',
+                    'max_size' => 'El tamaño de la imagen no puede superar los 4MB.'
+                ]
+            ]
+        ];
+
+        if (!$this->validate($rules)) {
+            $msg = current($this->validator->getErrors()) ?: 'Error en la validación.';
+            return $isAjax ? $this->respondError($msg) : redirect()->back()->withInput()->with('error', $msg);
+        }
+
         $fotoRuta = $this->uploadService->guardarEvidencia($file, $placaId, 'soplado');
-
-        $isAjax = $this->request->isAJAX() || $this->request->getHeaderLine('X-Requested-With') === 'XMLHttpRequest';
-
         if (!$fotoRuta) {
-            if ($isAjax) {
-                return $this->response->setJSON(['status' => 'error', 'message' => 'La foto de evidencia es obligatoria o el archivo no es válido.']);
-            }
-            return redirect()->back()->withInput()->with('error', 'La foto de evidencia es obligatoria.');
+            $msg = 'No se pudo guardar la fotografía de evidencia.';
+            return $isAjax ? $this->respondError($msg) : redirect()->back()->withInput()->with('error', $msg);
         }
 
         $nombreAnalista = (session('usuario_rol') === 'analista')
@@ -65,7 +86,8 @@ class Soplado extends BaseController
             'maquina_contenia' => $maquinaContenia,
             'gel_cucarachas'   => $gelCucarachas,
             'foto_ruta'        => $fotoRuta,
-            'created_at'       => date('Y-m-d H:i:s')
+            'fecha_creacion'   => date('Y-m-d H:i:s'),
+            'created_at'       => date('Y-m-d H:i:s'),
         ];
 
         if ($this->sopladoModel->insert($data)) {
@@ -73,84 +95,55 @@ class Soplado extends BaseController
             $this->inventarioModel->marcarIntervenido((string)$placaId, 'soplado', $nombreAnalista);
 
             if ($isAjax) {
-                return $this->response->setJSON(['status' => 'success', 'message' => 'Registro y evidencia guardados correctamente.']);
+                return $this->respondSuccess([], 'Registro y evidencia guardados correctamente.');
             }
             return redirect()->to(base_url('soplado/formulario'))->with('msg', 'Registro y evidencia guardados correctamente.');
         }
 
         if ($isAjax) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Error al guardar en la base de datos.']);
+            return $this->respondError('Error al guardar en la base de datos.');
         }
 
         return redirect()->back()->withInput()->with('error', 'Error al guardar en base de datos.');
     }
 
-    public function bitacora()
+    public function bitacora(): string
     {
-        $busqueda   = trim($this->request->getGet('buscar') ?? '');
-        $fechaDesde = trim($this->request->getGet('fecha_desde') ?? '');
-        $fechaHasta = trim($this->request->getGet('fecha_hasta') ?? '');
+        $busqueda   = trim((string) ($this->request->getGet('buscar') ?? ''));
+        $fechaDesde = trim((string) ($this->request->getGet('fecha_desde') ?? ''));
+        $fechaHasta = trim((string) ($this->request->getGet('fecha_hasta') ?? ''));
 
-        $builder = $this->sopladoModel->builder();
+        $registros = $this->sopladoModel->filtrarBitacora(
+            $busqueda !== '' ? $busqueda : null,
+            $fechaDesde !== '' ? $fechaDesde : null,
+            $fechaHasta !== '' ? $fechaHasta : null
+        );
 
-        if ($busqueda !== '') {
-            $builder->groupStart()
-                    ->like('placa_id', $busqueda)
-                    ->orLike('num_traslado', $busqueda)
-                    ->orLike('nombre_analista', $busqueda)
-                    ->groupEnd();
-        }
-
-        $colFecha = $this->sopladoModel->db->fieldExists('fecha_creacion', 'soplado_registros') ? 'fecha_creacion' : 'created_at';
-
-        if ($fechaDesde !== '') {
-            $builder->where($colFecha . ' >=', $fechaDesde . ' 00:00:00');
-        }
-
-        if ($fechaHasta !== '') {
-            $builder->where($colFecha . ' <=', $fechaHasta . ' 23:59:59');
-        }
-
-        $registros = $builder->orderBy('id', 'DESC')->get()->getResultArray();
-
-        $data['registros']      = $registros;
-        $data['totalFiltrados'] = count($registros);
-        $data['totalGeneral']   = (new SopladoModel())->countAllResults();
-        $data['busqueda']       = $busqueda;
-        $data['fechaDesde']     = $fechaDesde;
-        $data['fechaHasta']     = $fechaHasta;
+        $data = [
+            'registros'      => $registros,
+            'totalFiltrados' => count($registros),
+            'totalGeneral'   => $this->sopladoModel->contarTotal(),
+            'busqueda'       => $busqueda,
+            'fechaDesde'     => $fechaDesde,
+            'fechaHasta'     => $fechaHasta,
+        ];
 
         return view('soplado/bitacora', $data);
     }
 
     public function exportar(): ResponseInterface
     {
-        $busqueda   = trim($this->request->getGet('buscar') ?? '');
-        $fechaDesde = trim($this->request->getGet('fecha_desde') ?? '');
-        $fechaHasta = trim($this->request->getGet('fecha_hasta') ?? '');
+        $busqueda   = trim((string) ($this->request->getGet('buscar') ?? ''));
+        $fechaDesde = trim((string) ($this->request->getGet('fecha_desde') ?? ''));
+        $fechaHasta = trim((string) ($this->request->getGet('fecha_hasta') ?? ''));
 
-        $builder = $this->sopladoModel->builder();
+        $registros = $this->sopladoModel->filtrarBitacora(
+            $busqueda !== '' ? $busqueda : null,
+            $fechaDesde !== '' ? $fechaDesde : null,
+            $fechaHasta !== '' ? $fechaHasta : null
+        );
 
-        if ($busqueda !== '') {
-            $builder->groupStart()
-                    ->like('placa_id', $busqueda)
-                    ->orLike('num_traslado', $busqueda)
-                    ->orLike('nombre_analista', $busqueda)
-                    ->groupEnd();
-        }
-
-        $colFecha = $this->sopladoModel->db->fieldExists('fecha_creacion', 'soplado_registros') ? 'fecha_creacion' : 'created_at';
-
-        if ($fechaDesde !== '') {
-            $builder->where($colFecha . ' >=', $fechaDesde . ' 00:00:00');
-        }
-
-        if ($fechaHasta !== '') {
-            $builder->where($colFecha . ' <=', $fechaHasta . ' 23:59:59');
-        }
-
-        $registros = $builder->orderBy('id', 'DESC')->get()->getResultArray();
-        $filename  = "Reporte_Soplado_CPUs_" . date('Ymd_His') . ".csv";
+        $filename    = "Reporte_Soplado_CPUs_" . date('Ymd_His') . ".csv";
         $delimitador = ';';
 
         $headers = [

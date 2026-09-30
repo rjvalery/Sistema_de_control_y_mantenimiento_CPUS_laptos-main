@@ -1,31 +1,46 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Models\UsuarioModel;
+use CodeIgniter\HTTP\RequestInterface;
+use CodeIgniter\HTTP\ResponseInterface;
+use Psr\Log\LoggerInterface;
 
 class Auth extends BaseController
 {
-    public function index()
+    protected UsuarioModel $usuarioModel;
+
+    public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger): void
+    {
+        parent::initController($request, $response, $logger);
+        $this->usuarioModel = model(UsuarioModel::class);
+    }
+
+    public function index(): string
     {
         return view('auth/login');
     }
 
-    public function authenticate()
+    public function authenticate(): ResponseInterface
     {
+        $rules = [
+            'usuario'  => 'required|min_length[3]|max_length[60]',
+            'password' => 'required|min_length[4]',
+        ];
+
+        if (!$this->validate($rules)) {
+            return redirect()->back()->withInput()->with('error', 'Por favor ingrese un usuario y contraseña válidos.');
+        }
+
         $usuario  = trim((string) $this->request->getPost('usuario'));
         $password = (string) $this->request->getPost('password');
 
-        if ($usuario === '' || $password === '') {
-            return redirect()->back()->withInput()->with('error', 'Ingrese usuario y contraseña.');
-        }
+        $user = $this->usuarioModel->buscarActivoPorUsuario($usuario);
 
-        $user = (new UsuarioModel())
-            ->where('usuario', $usuario)
-            ->where('activo', 1)
-            ->first();
-
-        if (! $user || ! password_verify($password, $user['password'])) {
+        if (!$user || !password_verify($password, (string) $user['password'])) {
             return redirect()->back()->withInput()->with('error', 'Credenciales inválidas.');
         }
 
@@ -40,7 +55,7 @@ class Auth extends BaseController
         return redirect()->to(site_url('dashboard'));
     }
 
-    public function logout()
+    public function logout(): ResponseInterface
     {
         session()->destroy();
 

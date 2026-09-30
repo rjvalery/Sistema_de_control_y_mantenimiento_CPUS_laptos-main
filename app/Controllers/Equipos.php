@@ -8,26 +8,29 @@ use App\Models\EquipoModel;
 use App\Models\UsuarioModel;
 use App\Models\InventarioGeneralModel;
 use App\Services\UploadService;
+use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
+use Psr\Log\LoggerInterface;
 
 class Equipos extends BaseController
 {
-    protected $equipoModel;
-    protected $usuarioModel;
-    protected $uploadService;
-    protected $inventarioModel;
+    protected EquipoModel $equipoModel;
+    protected UsuarioModel $usuarioModel;
+    protected UploadService $uploadService;
+    protected InventarioGeneralModel $inventarioModel;
 
-    public function __construct()
+    public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger): void
     {
-        $this->equipoModel     = new EquipoModel();
-        $this->usuarioModel    = new UsuarioModel();
+        parent::initController($request, $response, $logger);
+        $this->equipoModel     = model(EquipoModel::class);
+        $this->usuarioModel    = model(UsuarioModel::class);
+        $this->inventarioModel = model(InventarioGeneralModel::class);
         $this->uploadService   = new UploadService();
-        $this->inventarioModel = new InventarioGeneralModel();
     }
 
-    public function formulario()
+    public function formulario(): string
     {
-        $data['analistas'] = $this->usuarioModel->where('rol', 'analista')->where('activo', 1)->orderBy('nombre', 'ASC')->findAll();
+        $data['analistas'] = $this->usuarioModel->obtenerAnalistasActivos();
         return view('equipos/formulario', $data);
     }
 
@@ -35,9 +38,9 @@ class Equipos extends BaseController
     {
         $placaId     = (string) ($this->request->getPost('placa_id') ?? '');
         $tipoGestion = (string) ($this->request->getPost('tipo_gestion') ?? '');
-        $file        = $this->request->getFile('foto_equipo');
-        $tieneArchivo = $file && $file->isValid() && !$file->hasMoved();
-        $esBaja      = ($tipoGestion === 'Baja');
+        $foto         = $this->request->getFile('foto_equipo');
+        $tieneArchivo = $foto && $foto->isValid() && !$foto->hasMoved();
+        $esBaja       = ($tipoGestion === 'Baja');
 
         // Validación con servicio nativo de CodeIgniter 4
         $rules = [
@@ -56,22 +59,22 @@ class Equipos extends BaseController
         ];
 
         if (!$this->validate($rules)) {
-            return $this->response->setJSON([
-                'status'  => 'error',
-                'message' => $this->validator->getError('foto_equipo') ?: 'Error en la validación de la imagen.'
-            ]);
+            $msg = $this->validator->getError('foto_equipo') ?: 'Error en la validación de la imagen.';
+            return $this->respondError($msg);
         }
 
-        // Guardado seguro con nombre aleatorio en public/uploads/equipos/
+        // Configuración de la ruta destino fuera del repositorio Git (C:\Users\LENOVO\Pictures\fotos\diagnostico)
+        $configRuta  = (string) (env('app.rutaDiagnosticos') ?: 'C:/Users/LENOVO/Pictures/fotos/diagnostico/');
+        $rutaDestino = rtrim(str_replace('\\', '/', $configRuta), '/') . '/';
+
         $fotoRuta = null;
-        if ($file && $file->isValid() && !$file->hasMoved()) {
-            $uploadDir = FCPATH . 'uploads/equipos/';
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0777, true);
+        if ($tieneArchivo) {
+            if (!is_dir($rutaDestino)) {
+                mkdir($rutaDestino, 0755, true);
             }
-            $nombreFoto = $file->getRandomName();
-            $file->move($uploadDir, $nombreFoto);
-            $fotoRuta = 'uploads/equipos/' . $nombreFoto;
+            $nombreGenerado = $foto->getRandomName();
+            $foto->move($rutaDestino, $nombreGenerado);
+            $fotoRuta = $rutaDestino . $nombreGenerado;
         }
 
         $nombreAnalista = (session('usuario_rol') === 'analista')
@@ -102,74 +105,49 @@ class Equipos extends BaseController
             // Sincronizar y descontar de pendientes en inventario general
             $this->inventarioModel->marcarIntervenido((string)$placaId, 'diagnostico', $nombreAnalista);
 
-            return $this->response->setJSON(['status' => 'success', 'message' => 'Guardado correctamente']);
+            return $this->respondSuccess([], 'Guardado correctamente');
         }
 
-        return $this->response->setJSON(['status' => 'error', 'message' => 'Error al guardar en base de datos']);
+        return $this->respondError('Error al guardar en base de datos');
     }
 
-    public function bitacora()
+    public function bitacora(): string
     {
-        $busqueda   = trim($this->request->getGet('buscar') ?? '');
-        $fechaDesde = trim($this->request->getGet('fecha_desde') ?? '');
-        $fechaHasta = trim($this->request->getGet('fecha_hasta') ?? '');
+        $busqueda   = trim((string) ($this->request->getGet('buscar') ?? ''));
+        $fechaDesde = trim((string) ($this->request->getGet('fecha_desde') ?? ''));
+        $fechaHasta = trim((string) ($this->request->getGet('fecha_hasta') ?? ''));
 
-        $builder = $this->equipoModel->builder();
+        $registros = $this->equipoModel->filtrarBitacora(
+            $busqueda !== '' ? $busqueda : null,
+            $fechaDesde !== '' ? $fechaDesde : null,
+            $fechaHasta !== '' ? $fechaHasta : null
+        );
 
-        if ($busqueda !== '') {
-            $builder->groupStart()
-                    ->like('placa_id', $busqueda)
-                    ->orLike('num_traslado', $busqueda)
-                    ->orLike('nombre_analista', $busqueda)
-                    ->groupEnd();
-        }
-
-        if ($fechaDesde !== '') {
-            $builder->where('fecha_creacion >=', $fechaDesde . ' 00:00:00');
-        }
-
-        if ($fechaHasta !== '') {
-            $builder->where('fecha_creacion <=', $fechaHasta . ' 23:59:59');
-        }
-
-        $registros = $builder->orderBy('id', 'DESC')->get()->getResultArray();
-
-        $data['registros']      = $registros;
-        $data['totalFiltrados'] = count($registros);
-        $data['totalGeneral']   = (new EquipoModel())->countAllResults();
-        $data['busqueda']       = $busqueda;
-        $data['fechaDesde']     = $fechaDesde;
-        $data['fechaHasta']     = $fechaHasta;
+        $data = [
+            'registros'      => $registros,
+            'totalFiltrados' => count($registros),
+            'totalGeneral'   => $this->equipoModel->contarTotal(),
+            'busqueda'       => $busqueda,
+            'fechaDesde'     => $fechaDesde,
+            'fechaHasta'     => $fechaHasta,
+        ];
 
         return view('equipos/bitacora', $data);
     }
 
     public function exportar(): ResponseInterface
     {
-        $busqueda   = trim($this->request->getGet('buscar') ?? '');
-        $fechaDesde = trim($this->request->getGet('fecha_desde') ?? '');
-        $fechaHasta = trim($this->request->getGet('fecha_hasta') ?? '');
+        $busqueda   = trim((string) ($this->request->getGet('buscar') ?? ''));
+        $fechaDesde = trim((string) ($this->request->getGet('fecha_desde') ?? ''));
+        $fechaHasta = trim((string) ($this->request->getGet('fecha_hasta') ?? ''));
 
-        $builder = $this->equipoModel->builder();
+        $registros = $this->equipoModel->filtrarBitacora(
+            $busqueda !== '' ? $busqueda : null,
+            $fechaDesde !== '' ? $fechaDesde : null,
+            $fechaHasta !== '' ? $fechaHasta : null
+        );
 
-        if ($busqueda !== '') {
-            $builder->groupStart()
-                    ->like('placa_id', $busqueda)
-                    ->orLike('num_traslado', $busqueda)
-                    ->orLike('nombre_analista', $busqueda)
-                    ->groupEnd();
-        }
-
-        if ($fechaDesde !== '') {
-            $builder->where('fecha_creacion >=', $fechaDesde . ' 00:00:00');
-        }
-
-        if ($fechaHasta !== '') {
-            $builder->where('fecha_creacion <=', $fechaHasta . ' 23:59:59');
-        }
-
-        $registros = $builder->orderBy('id', 'DESC')->get()->getResultArray();
-        $filename  = "Reporte_Equipos_Diagnostico_" . date('Ymd_His') . ".csv";
+        $filename    = "Reporte_Equipos_Diagnostico_" . date('Ymd_His') . ".csv";
         $delimitador = ';';
 
         $headers = [

@@ -470,10 +470,10 @@ class InventarioGeneralModel extends Model
             $db->query("DELETE FROM `inventario_general` WHERE `observaciones` LIKE 'Mapeado desde%';");
         } catch (\Throwable $e) {}
 
-        // Resolver dinámicamente las columnas de fecha existentes en cada tabla para evitar errores SQL #1054
-        $fechaColEq = $db->fieldExists('fecha_creacion', 'equipos') ? 'eq.fecha_creacion' : ($db->fieldExists('created_at', 'equipos') ? 'eq.created_at' : 'NOW()');
-        $fechaColSp = $db->fieldExists('created_at', 'soplado_registros') ? 'sp.created_at' : ($db->fieldExists('fecha_creacion', 'soplado_registros') ? 'sp.fecha_creacion' : 'NOW()');
-        $fechaColGp = $db->fieldExists('created_at', 'garantias_portatiles') ? 'gp.created_at' : ($db->fieldExists('fecha_creacion', 'garantias_portatiles') ? 'gp.fecha_creacion' : 'NOW()');
+        // Columnas canónicas de fecha de creación indexadas
+        $fechaColEq = 'eq.fecha_creacion';
+        $fechaColSp = 'sp.fecha_creacion';
+        $fechaColGp = 'gp.fecha_creacion';
 
         // 1. Mapeo y cruce con tabla `equipos` (Diagnóstico CPUs / Escritorio)
         if ($db->tableExists('equipos')) {
@@ -590,10 +590,10 @@ class InventarioGeneralModel extends Model
             $db->query("DELETE FROM `inventario_general` WHERE `observaciones` LIKE 'Mapeado desde%';");
         } catch (\Throwable $e) {}
 
-        // Resolver dinámicamente las columnas de fecha existentes en cada tabla para evitar errores SQL #1054
-        $fechaColEq = $db->fieldExists('fecha_creacion', 'equipos') ? 'eq.fecha_creacion' : ($db->fieldExists('created_at', 'equipos') ? 'eq.created_at' : 'NOW()');
-        $fechaColSp = $db->fieldExists('created_at', 'soplado_registros') ? 'sp.created_at' : ($db->fieldExists('fecha_creacion', 'soplado_registros') ? 'sp.fecha_creacion' : 'NOW()');
-        $fechaColGp = $db->fieldExists('created_at', 'garantias_portatiles') ? 'gp.created_at' : ($db->fieldExists('fecha_creacion', 'garantias_portatiles') ? 'gp.fecha_creacion' : 'NOW()');
+        // Columnas canónicas de fecha de creación indexadas
+        $fechaColEq = 'eq.fecha_creacion';
+        $fechaColSp = 'sp.fecha_creacion';
+        $fechaColGp = 'gp.fecha_creacion';
 
         $whereTraslado = '';
         if (!empty($numTraslado)) {
@@ -792,6 +792,45 @@ class InventarioGeneralModel extends Model
         }
 
         return [];
+    }
+
+    /**
+     * Filtra registros de inventario general según búsqueda, estado de intervención y traslado.
+     */
+    public function filtrarInventario(?string $busqueda = null, ?string $filtro = null, ?string $traslado = null, int $limite = 250): array
+    {
+        $builder = $this->builder();
+
+        if ($filtro === 'agregados' || $filtro === 'intervenidos') {
+            $builder->where('intervenido', 1);
+        } elseif ($filtro === 'pendientes') {
+            $builder->where('intervenido', 0);
+        }
+
+        if ($traslado !== null && trim($traslado) !== '') {
+            $builder->where('num_traslado', trim($traslado));
+        }
+
+        if ($busqueda !== null && trim($busqueda) !== '') {
+            $termino = trim($busqueda);
+            $builder->groupStart()
+                ->like('identificador_1', $termino)
+                ->orLike('identificador_2', $termino)
+                ->orLike('num_traslado', $termino)
+                ->orLike('ref_principal', $termino)
+                ->orLike('descripcion', $termino)
+                ->orLike('zona_origen', $termino)
+                ->orLike('ubicacion_origen', $termino)
+                ->orLike('verificado', $termino)
+                ->orLike('observaciones', $termino)
+                ->orLike('placa_id', $termino)
+                ->orLike('serial', $termino)
+                ->orLike('modulo_intervencion', $termino)
+                ->orLike('analista_intervencion', $termino)
+                ->groupEnd();
+        }
+
+        return $builder->orderBy('id', 'DESC')->limit($limite)->get()->getResultArray();
     }
 }
 

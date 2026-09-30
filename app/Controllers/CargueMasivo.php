@@ -5,15 +5,18 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\InventarioGeneralModel;
+use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
+use Psr\Log\LoggerInterface;
 
 class CargueMasivo extends BaseController
 {
     protected InventarioGeneralModel $inventarioModel;
 
-    public function __construct()
+    public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger): void
     {
-        $this->inventarioModel = new InventarioGeneralModel();
+        parent::initController($request, $response, $logger);
+        $this->inventarioModel = model(InventarioGeneralModel::class);
     }
 
     /**
@@ -36,37 +39,13 @@ class CargueMasivo extends BaseController
             $limite = 250;
         }
 
-        $builder = $this->inventarioModel->builder();
+        $registros = $this->inventarioModel->filtrarInventario(
+            $busqueda !== '' ? $busqueda : null,
+            $filtro !== '' ? $filtro : null,
+            $traslado !== '' ? $traslado : null,
+            $limite
+        );
 
-        if ($filtro === 'agregados' || $filtro === 'intervenidos') {
-            $builder->where('intervenido', 1);
-        } elseif ($filtro === 'pendientes') {
-            $builder->where('intervenido', 0);
-        }
-
-        if ($traslado !== '') {
-            $builder->where('num_traslado', $traslado);
-        }
-
-        if ($busqueda !== '') {
-            $builder->groupStart()
-                ->like('identificador_1', $busqueda)
-                ->orLike('identificador_2', $busqueda)
-                ->orLike('num_traslado', $busqueda)
-                ->orLike('ref_principal', $busqueda)
-                ->orLike('descripcion', $busqueda)
-                ->orLike('zona_origen', $busqueda)
-                ->orLike('ubicacion_origen', $busqueda)
-                ->orLike('verificado', $busqueda)
-                ->orLike('observaciones', $busqueda)
-                ->orLike('placa_id', $busqueda)
-                ->orLike('serial', $busqueda)
-                ->orLike('modulo_intervencion', $busqueda)
-                ->orLike('analista_intervencion', $busqueda)
-                ->groupEnd();
-        }
-
-        $registros = $builder->orderBy('id', 'DESC')->limit($limite)->get()->getResultArray();
         $totalFiltrados = count($registros);
         $statsInventario = $this->inventarioModel->obtenerEstadisticasInventario();
         $trasladosDisponibles = $this->inventarioModel->obtenerTrasladosRegistrados();

@@ -5,35 +5,41 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\EquipoModel;
-use App\Models\PortatilModel;
 use App\Models\InventarioGeneralModel;
+use App\Models\PortatilModel;
 use App\Models\SopladoModel;
 use App\Models\UsuarioModel;
+use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
+use CodeIgniter\Model;
+use Psr\Log\LoggerInterface;
 
 class Dashboard extends BaseController
 {
+    protected UsuarioModel $usuarioModel;
+    protected EquipoModel $equipoModel;
+    protected SopladoModel $sopladoModel;
+    protected PortatilModel $portatilModel;
+    protected InventarioGeneralModel $inventarioModel;
+
+    public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger): void
+    {
+        parent::initController($request, $response, $logger);
+
+        $this->usuarioModel    = model(UsuarioModel::class);
+        $this->equipoModel     = model(EquipoModel::class);
+        $this->sopladoModel    = model(SopladoModel::class);
+        $this->portatilModel   = model(PortatilModel::class);
+        $this->inventarioModel = model(InventarioGeneralModel::class);
+    }
+
     public function index(): string|ResponseInterface
     {
         $periodo = strtolower(trim((string)($this->request->getGet('periodo') ?? 'todos')));
         $data = $this->obtenerDatosMetricas($periodo);
 
         if ($this->request->isAJAX() || $this->request->getGet('ajax') === '1') {
-            return $this->response->setJSON([
-                'status'               => 'success',
-                'periodo'              => $data['periodo'],
-                'labelPeriodo'         => $data['labelPeriodo'],
-                'statsInventario'      => $data['statsInventario'],
-                'totalIntervenciones'  => $data['totalIntervenciones'],
-                'totalEquipos'         => $data['totalEquipos'],
-                'totalSoplado'         => $data['totalSoplado'],
-                'totalPortatiles'      => $data['totalPortatiles'],
-                'porcEq'               => $data['porcEq'],
-                'porcSp'               => $data['porcSp'],
-                'porcPt'               => $data['porcPt'],
-                'totalTraslados'       => $data['totalTraslados'],
-                'maquinasIntervenidas' => $data['maquinasIntervenidas'],
-            ]);
+            return $this->response->setJSON($this->formatearRespuestaJson($data));
         }
 
         if (session('usuario_rol') === 'analista') {
@@ -51,7 +57,15 @@ class Dashboard extends BaseController
         $periodo = strtolower(trim((string)($this->request->getGet('periodo') ?? 'todos')));
         $data = $this->obtenerDatosMetricas($periodo);
 
-        return $this->response->setJSON([
+        return $this->response->setJSON($this->formatearRespuestaJson($data));
+    }
+
+    /**
+     * Centraliza la estructura estándar del payload de respuesta JSON para AJAX y endpoints de métricas.
+     */
+    private function formatearRespuestaJson(array $data): array
+    {
+        return [
             'status'               => 'success',
             'periodo'              => $data['periodo'],
             'labelPeriodo'         => $data['labelPeriodo'],
@@ -65,7 +79,7 @@ class Dashboard extends BaseController
             'porcPt'               => $data['porcPt'],
             'totalTraslados'       => $data['totalTraslados'],
             'maquinasIntervenidas' => $data['maquinasIntervenidas'],
-        ]);
+        ];
     }
 
     /**
@@ -75,45 +89,25 @@ class Dashboard extends BaseController
     {
         [$periodo, $fechaDesde, $fechaHasta, $labelPeriodo] = $this->resolverRangoFechas($periodo);
 
-        $usuarioModel    = new UsuarioModel();
-        $equipoModel     = new EquipoModel();
-        $sopladoModel    = new SopladoModel();
-        $portatilModel   = new PortatilModel();
-        $inventarioModel = new InventarioGeneralModel();
-
         // 1. Diagnóstico CPU en el periodo
-        $bEq = $equipoModel->builder();
-        if ($fechaDesde !== null && $fechaHasta !== null) {
-            $bEq->where('fecha_creacion >=', $fechaDesde)->where('fecha_creacion <=', $fechaHasta);
-        }
-        $totalEquipos = (int) $bEq->countAllResults();
+        $totalEquipos = $this->equipoModel->contarPorRango($fechaDesde, $fechaHasta);
 
         // 2. Mantenimiento Soplado en el periodo
-        $bSp = $sopladoModel->builder();
-        $colSp = $sopladoModel->db->fieldExists('fecha_creacion', 'soplado_registros') ? 'fecha_creacion' : 'created_at';
-        if ($fechaDesde !== null && $fechaHasta !== null) {
-            $bSp->where("{$colSp} >=", $fechaDesde)->where("{$colSp} <=", $fechaHasta);
-        }
-        $totalSoplado = (int) $bSp->countAllResults();
+        $totalSoplado = $this->sopladoModel->contarPorRango($fechaDesde, $fechaHasta);
 
         // 3. Garantías Portátiles en el periodo
-        $bPt = $portatilModel->builder();
-        $colPt = $portatilModel->db->fieldExists('fecha_creacion', 'garantias_portatiles') ? 'fecha_creacion' : 'created_at';
-        if ($fechaDesde !== null && $fechaHasta !== null) {
-            $bPt->where("{$colPt} >=", $fechaDesde)->where("{$colPt} <=", $fechaHasta);
-        }
-        $totalPortatiles = (int) $bPt->countAllResults();
+        $totalPortatiles = $this->portatilModel->contarPorRango($fechaDesde, $fechaHasta);
 
         // 4. Analistas registrados
-        $totalAnalistas = $usuarioModel->where('rol', 'analista')->countAllResults();
+        $totalAnalistas = $this->usuarioModel->contarPorRol('analista');
 
         // 5. Total intervenciones consolidadas
         $totalIntervenciones = $totalEquipos + $totalSoplado + $totalPortatiles;
 
         // 6. Inventario general filtrado por periodo
-        $statsInventario      = $inventarioModel->obtenerEstadisticasInventario($fechaDesde, $fechaHasta);
-        $maquinasIntervenidas = $inventarioModel->obtenerMaquinasIntervenidasRecientes(8, $fechaDesde, $fechaHasta);
-        $totalTraslados       = $inventarioModel->contarTrasladosRegistrados();
+        $statsInventario      = $this->inventarioModel->obtenerEstadisticasInventario($fechaDesde, $fechaHasta);
+        $maquinasIntervenidas = $this->inventarioModel->obtenerMaquinasIntervenidasRecientes(8, $fechaDesde, $fechaHasta);
+        $totalTraslados       = $this->inventarioModel->contarTrasladosRegistrados();
 
         // Porcentajes de participación por módulo técnico
         $porcEq = $totalIntervenciones > 0 ? round(($totalEquipos / $totalIntervenciones) * 100, 1) : 0;

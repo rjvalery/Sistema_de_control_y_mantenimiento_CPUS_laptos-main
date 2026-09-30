@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use CodeIgniter\HTTP\Files\UploadedFile;
@@ -15,9 +17,11 @@ class UploadService
             return null;
         }
 
-        $rawDir  = env("uploads.{$categoria}", 'C:/Users/LENOVO/Pictures/fotos/' . $categoria);
-        $baseDir = rtrim(str_replace('\\', '/', (string) $rawDir), '/');
+        $rawDir = ($categoria === 'diagnostico')
+            ? (env('app.rutaDiagnosticos') ?: env('uploads.diagnostico', 'C:/Users/LENOVO/Pictures/fotos/diagnostico'))
+            : env("uploads.{$categoria}", 'C:/Users/LENOVO/Pictures/fotos/' . $categoria);
 
+        $baseDir = rtrim(str_replace('\\', '/', (string) $rawDir), '/');
 
         $meses = [
             '01' => 'Enero',      '02' => 'Febrero',   '03' => 'Marzo',
@@ -33,7 +37,7 @@ class UploadService
         $targetDir = "{$baseDir}/{$anio}/{$nombreMes}/{$dia}/";
 
         if (!is_dir($targetDir)) {
-            mkdir($targetDir, 0777, true);
+            mkdir($targetDir, 0755, true);
         }
 
         $ext = $file->getClientExtension() ?: 'jpg';

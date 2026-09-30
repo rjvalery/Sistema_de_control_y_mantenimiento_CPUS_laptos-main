@@ -5,15 +5,18 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\UsuarioModel;
+use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
+use Psr\Log\LoggerInterface;
 
 class Usuarios extends BaseController
 {
     protected UsuarioModel $usuarioModel;
 
-    public function __construct()
+    public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger): void
     {
-        $this->usuarioModel = new UsuarioModel();
+        parent::initController($request, $response, $logger);
+        $this->usuarioModel = model(UsuarioModel::class);
     }
 
     /**
@@ -28,24 +31,10 @@ class Usuarios extends BaseController
         $busqueda  = trim((string) $this->request->getGet('buscar'));
         $filtroRol = trim((string) $this->request->getGet('rol'));
 
-        $builder = $this->usuarioModel->builder();
-
-        if ($filtroRol !== '' && in_array($filtroRol, ['admin', 'analista'], true)) {
-            $builder->where('rol', $filtroRol);
-        }
-
-        if ($busqueda !== '') {
-            $builder->groupStart()
-                ->like('nombre', $busqueda)
-                ->orLike('usuario', $busqueda)
-                ->groupEnd();
-        }
-
-        $usuarios = $builder->orderBy('id', 'ASC')->get()->getResultArray();
-
+        $usuarios       = $this->usuarioModel->filtrarUsuarios($busqueda !== '' ? $busqueda : null, $filtroRol !== '' ? $filtroRol : null);
         $totalUsuarios  = $this->usuarioModel->countAllResults();
-        $totalAdmins    = (new UsuarioModel())->where('rol', 'admin')->countAllResults();
-        $totalAnalistas = (new UsuarioModel())->where('rol', 'analista')->countAllResults();
+        $totalAdmins    = $this->usuarioModel->contarPorRol('admin');
+        $totalAnalistas = $this->usuarioModel->contarPorRol('analista');
 
         $data = [
             'usuarios'       => $usuarios,
@@ -68,13 +57,17 @@ class Usuarios extends BaseController
             return redirect()->to(base_url('dashboard'))->with('error', 'No tienes permisos para modificar roles.');
         }
 
-        $id = (int) $this->request->getPost('id');
-        $nuevoRol = trim((string) $this->request->getPost('rol'));
+        $rules = [
+            'id'  => 'required|is_natural_no_zero',
+            'rol' => 'required|in_list[admin,analista]',
+        ];
 
-        $rolesPermitidos = ['admin', 'analista'];
-        if (!in_array($nuevoRol, $rolesPermitidos, true)) {
-            return redirect()->to(base_url('usuarios'))->with('error', 'El rol seleccionado no es válido.');
+        if (!$this->validate($rules)) {
+            return redirect()->to(base_url('usuarios'))->with('error', 'El rol o usuario seleccionado no es válido.');
         }
+
+        $id       = (int) $this->request->getPost('id');
+        $nuevoRol = trim((string) $this->request->getPost('rol'));
 
         $usuario = $this->usuarioModel->find($id);
         if (!$usuario) {
@@ -135,7 +128,16 @@ class Usuarios extends BaseController
             return redirect()->to(base_url('dashboard'))->with('error', 'No tienes permisos para restablecer contraseñas.');
         }
 
-        $id = (int) $this->request->getPost('id');
+        $rules = [
+            'id'             => 'required|is_natural_no_zero',
+            'nueva_password' => 'permit_empty|min_length[6]',
+        ];
+
+        if (!$this->validate($rules)) {
+            return redirect()->to(base_url('usuarios'))->with('error', 'La nueva contraseña debe tener al menos 6 caracteres.');
+        }
+
+        $id      = (int) $this->request->getPost('id');
         $usuario = $this->usuarioModel->find($id);
 
         if (!$usuario) {
@@ -145,10 +147,6 @@ class Usuarios extends BaseController
         $nuevaPassword = trim((string) $this->request->getPost('nueva_password'));
         if ($nuevaPassword === '') {
             $nuevaPassword = 'Password123*';
-        }
-
-        if (strlen($nuevaPassword) < 6) {
-            return redirect()->to(base_url('usuarios'))->with('error', 'La nueva contraseña debe tener al menos 6 caracteres.');
         }
 
         $this->usuarioModel->update($id, [
@@ -173,20 +171,22 @@ class Usuarios extends BaseController
             return redirect()->to(base_url('login'))->with('error', 'Usuario no encontrado.');
         }
 
-        $passwordActual    = (string) $this->request->getPost('password_actual');
-        $passwordNueva     = (string) $this->request->getPost('password_nueva');
-        $passwordConfirmar = (string) $this->request->getPost('password_confirmar');
+        $rules = [
+            'password_actual'    => 'required',
+            'password_nueva'     => 'required|min_length[6]',
+            'password_confirmar' => 'required|matches[password_nueva]',
+        ];
+
+        if (!$this->validate($rules)) {
+            $primerError = current($this->validator->getErrors()) ?: 'Error en la validación de contraseñas.';
+            return redirect()->back()->with('error', $primerError);
+        }
+
+        $passwordActual = (string) $this->request->getPost('password_actual');
+        $passwordNueva  = (string) $this->request->getPost('password_nueva');
 
         if (!password_verify($passwordActual, (string) $usuario['password'])) {
             return redirect()->back()->with('error', 'La contraseña actual ingresada es incorrecta.');
-        }
-
-        if (strlen($passwordNueva) < 6) {
-            return redirect()->back()->with('error', 'La nueva contraseña debe tener al menos 6 caracteres.');
-        }
-
-        if ($passwordNueva !== $passwordConfirmar) {
-            return redirect()->back()->with('error', 'La nueva contraseña y su confirmación no coinciden.');
         }
 
         $this->usuarioModel->update($idUsuario, [
