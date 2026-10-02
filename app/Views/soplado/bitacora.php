@@ -21,7 +21,9 @@
                 ], fn($val) => $val !== '');
                 $urlExcel = base_url('soplado/exportar') . (!empty($paramsExcel) ? '?' . http_build_query($paramsExcel) : '');
             ?>
+            <?php if (has_permission('exportar_excel')): ?>
             <a href="<?= $urlExcel ?>" class="btn btn-success btn-sm"><i class="fa-solid fa-file-excel me-1"></i> Excel (<?= number_format($totalFiltrados ?? count($registros)) ?>)</a>
+            <?php endif; ?>
         </div>
     </div>
     <div class="card-body p-4">
@@ -110,12 +112,12 @@
                                 <td><?= esc($r['nombre_analista']) ?></td>
                                 <td><?= esc($r['num_traslado']) ?></td>
                                 <td><strong><?= esc($r['placa_id']) ?></strong></td>
-                                <td><span class="badge bg-<?= $r['energiza'] === 'Si' ? 'success' : 'danger' ?>"><?= $r['energiza'] ?></span></td>
-                                <td><span class="badge bg-<?= $r['da_video'] === 'Si' ? 'success' : 'danger' ?>"><?= $r['da_video'] ?></span></td>
-                                <td><span class="badge bg-<?= $r['detecta_disco'] === 'Si' ? 'success' : 'danger' ?>"><?= $r['detecta_disco'] ?></span></td>
-                                <td><span class="badge bg-<?= $r['ingreso_bios'] === 'Si' ? 'success' : 'danger' ?>"><?= $r['ingreso_bios'] ?></span></td>
-                                <td><span class="badge bg-<?= $r['pasta_termica'] === 'Si' ? 'success' : 'danger' ?>"><?= $r['pasta_termica'] ?></span></td>
-                                <td><span class="badge bg-<?= $r['gel_cucarachas'] === 'Si' ? 'success' : 'danger' ?>"><?= $r['gel_cucarachas'] ?></span></td>
+                                <td><span class="badge bg-<?= $r['energiza'] === 'Si' ? 'success' : 'danger' ?>"><?= esc($r['energiza']) ?></span></td>
+                                <td><span class="badge bg-<?= $r['da_video'] === 'Si' ? 'success' : 'danger' ?>"><?= esc($r['da_video']) ?></span></td>
+                                <td><span class="badge bg-<?= $r['detecta_disco'] === 'Si' ? 'success' : 'danger' ?>"><?= esc($r['detecta_disco']) ?></span></td>
+                                <td><span class="badge bg-<?= $r['ingreso_bios'] === 'Si' ? 'success' : 'danger' ?>"><?= esc($r['ingreso_bios']) ?></span></td>
+                                <td><span class="badge bg-<?= $r['pasta_termica'] === 'Si' ? 'success' : 'danger' ?>"><?= esc($r['pasta_termica']) ?></span></td>
+                                <td><span class="badge bg-<?= $r['gel_cucarachas'] === 'Si' ? 'success' : 'danger' ?>"><?= esc($r['gel_cucarachas']) ?></span></td>
                                 <td><?= esc($r['maquina_contenia']) ?></td>
                             </tr>
                         <?php endforeach; ?>

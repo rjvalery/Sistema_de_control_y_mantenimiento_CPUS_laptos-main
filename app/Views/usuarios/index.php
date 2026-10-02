@@ -195,16 +195,28 @@
                                             </span>
                                         </td>
                                         <td>
-                                            <button type="button" 
-                                                    class="btn btn-outline-warning btn-sm fw-semibold" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#modalResetPass"
-                                                    data-id="<?= $u['id'] ?>"
-                                                    data-nombre="<?= esc($u['nombre']) ?>"
-                                                    data-usuario="<?= esc($u['usuario']) ?>"
-                                                    title="Restablecer clave">
-                                                <i class="fa-solid fa-key me-1"></i> Reset Clave
-                                            </button>
+                                            <div class="d-flex gap-1">
+                                                <button type="button" 
+                                                        class="btn btn-outline-info btn-sm fw-semibold" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#modalPermisos"
+                                                        data-id="<?= $u['id'] ?>"
+                                                        data-nombre="<?= esc($u['nombre']) ?>"
+                                                        data-permisos='<?= esc($u['permisos'] ?? "[]") ?>'
+                                                        title="Editar permisos">
+                                                    <i class="fa-solid fa-user-lock"></i> Permisos
+                                                </button>
+                                                <button type="button" 
+                                                        class="btn btn-outline-warning btn-sm fw-semibold" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#modalResetPass"
+                                                        data-id="<?= $u['id'] ?>"
+                                                        data-nombre="<?= esc($u['nombre']) ?>"
+                                                        data-usuario="<?= esc($u['usuario']) ?>"
+                                                        title="Restablecer clave">
+                                                    <i class="fa-solid fa-key"></i> Reset
+                                                </button>
+                                            </div>
                                         </td>
                                         <td class="text-end pe-3 text-muted small">
                                             <?= !empty($u['created_at']) ? date('d/m/Y H:i', strtotime($u['created_at'])) : '—' ?>
@@ -313,6 +325,57 @@
                     </button>
                 </div>
             </form>
+</div>
+    </div>
+</div>
+
+<!-- MODAL PERMISOS -->
+<div class="modal fade" id="modalPermisos" tabindex="-1" aria-labelledby="modalPermisosLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-info text-white py-3 px-4">
+                <h5 class="modal-title fs-6 fw-bold mb-0" id="modalPermisosLabel">
+                    <i class="fa-solid fa-user-lock me-2"></i>Permisos Específicos
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="<?= base_url('usuarios/guardar-permisos') ?>" method="POST">
+                <?= csrf_field() ?>
+                <input type="hidden" name="id" id="permisos_user_id" value="">
+                <div class="modal-body p-4">
+                    <p class="small text-muted mb-3">Editando permisos para: <strong id="permisos_user_nombre" class="text-dark"></strong></p>
+                    <div class="alert alert-info py-2 small">Selecciona los módulos a los que este usuario tendrá acceso en el sistema.</div>
+                    
+                    <div class="row g-2">
+                        <?php 
+                        $listaPermisos = [
+                            'ver_inventario' => 'Ver Inventario General',
+                            'gestionar_inventario' => 'Gestionar Inventario',
+                            'ver_equipos' => 'Ver Bitácora Diagnóstico',
+                            'editar_equipos' => 'Editar Diagnóstico CPU',
+                            'ver_soplado' => 'Ver Bitácora Soplado',
+                            'editar_soplado' => 'Editar Soplado',
+                            'ver_portatiles' => 'Ver Bitácora Portátiles',
+                            'editar_portatiles' => 'Editar Portátiles',
+                            'exportar_excel' => 'Exportar Datos a Excel',
+                        ];
+                        foreach($listaPermisos as $key => $label): ?>
+                        <div class="col-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input permiso-checkbox" type="checkbox" name="permisos[]" value="<?= $key ?>" id="perm_<?= $key ?>">
+                                <label class="form-check-label small" for="perm_<?= $key ?>"><?= $label ?></label>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light px-4 py-3">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-info text-white btn-sm fw-bold px-3">
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Permisos
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -333,6 +396,28 @@ document.addEventListener('DOMContentLoaded', function () {
             modalResetPass.querySelector('#reset_user_nombre').textContent = nombre;
             modalResetPass.querySelector('#reset_user_usuario').textContent = usuario;
             modalResetPass.querySelector('#reset_nueva_pass').value = '';
+        });
+    }
+
+    const modalPermisos = document.getElementById('modalPermisos');
+    if (modalPermisos) {
+        modalPermisos.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const id = button.getAttribute('data-id');
+            const nombre = button.getAttribute('data-nombre');
+            let permisos = [];
+            try {
+                permisos = JSON.parse(button.getAttribute('data-permisos') || '[]');
+            } catch (e) {
+                permisos = [];
+            }
+            
+            modalPermisos.querySelector('#permisos_user_id').value = id;
+            modalPermisos.querySelector('#permisos_user_nombre').textContent = nombre;
+            
+            modalPermisos.querySelectorAll('.permiso-checkbox').forEach(chk => {
+                chk.checked = permisos.includes(chk.value);
+            });
         });
     }
 });

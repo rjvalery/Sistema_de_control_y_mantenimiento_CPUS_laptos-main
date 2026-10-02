@@ -39,134 +39,6 @@ class InventarioGeneralModel extends Model
     protected $useTimestamps = false;
     protected $returnType    = 'array';
 
-    private static bool $tablaAsegurada = false;
-
-    /**
-     * Crea la tabla en la base de datos si aún no existe y asegura las columnas requeridas.
-     */
-    public function asegurarTabla(): void
-    {
-        if (self::$tablaAsegurada) {
-            return;
-        }
-
-        $sql = "CREATE TABLE IF NOT EXISTS `inventario_general` (
-            `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-            `identificador_1` VARCHAR(100) NULL,
-            `identificador_2` VARCHAR(100) NULL,
-            `ref_principal` VARCHAR(150) NULL,
-            `descripcion` VARCHAR(255) NULL,
-            `zona_origen` VARCHAR(100) NULL,
-            `ubicacion_origen` VARCHAR(150) NULL,
-            `verificado` VARCHAR(50) NULL,
-            `observaciones` TEXT NULL,
-            `placa_id` VARCHAR(100) NULL,
-            `serial` VARCHAR(100) NULL,
-            `tipo_equipo` VARCHAR(80) NULL,
-            `marca` VARCHAR(100) NULL,
-            `modelo` VARCHAR(150) NULL,
-            `ubicacion` VARCHAR(150) NULL,
-            `estado` VARCHAR(80) NULL,
-            `datos_adicionales` TEXT NULL,
-            `archivo_origen` VARCHAR(255) NULL,
-            `usuario_cargue` VARCHAR(120) NULL,
-            `intervenido` TINYINT(1) DEFAULT 0,
-            `fecha_intervencion` DATETIME NULL,
-            `modulo_intervencion` VARCHAR(50) NULL,
-            `analista_intervencion` VARCHAR(120) NULL,
-            `created_at` DATETIME NULL,
-            KEY `idx_id1` (`identificador_1`),
-            KEY `idx_id2` (`identificador_2`),
-            KEY `idx_placa` (`placa_id`),
-            KEY `idx_serial` (`serial`),
-            KEY `idx_intervenido` (`intervenido`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;";
-
-        $this->db->query($sql);
-
-        // Asegurar que las columnas del Formato en Cubic existan
-        $columnasCubic = [
-            'identificador_1'  => "ALTER TABLE `inventario_general` ADD COLUMN `identificador_1` VARCHAR(100) NULL AFTER `id`;",
-            'identificador_2'  => "ALTER TABLE `inventario_general` ADD COLUMN `identificador_2` VARCHAR(100) NULL AFTER `identificador_1`;",
-            'ref_principal'    => "ALTER TABLE `inventario_general` ADD COLUMN `ref_principal` VARCHAR(150) NULL AFTER `identificador_2`;",
-            'descripcion'      => "ALTER TABLE `inventario_general` ADD COLUMN `descripcion` VARCHAR(255) NULL AFTER `ref_principal`;",
-            'zona_origen'      => "ALTER TABLE `inventario_general` ADD COLUMN `zona_origen` VARCHAR(100) NULL AFTER `descripcion`;",
-            'ubicacion_origen' => "ALTER TABLE `inventario_general` ADD COLUMN `ubicacion_origen` VARCHAR(150) NULL AFTER `zona_origen`;",
-            'verificado'       => "ALTER TABLE `inventario_general` ADD COLUMN `verificado` VARCHAR(50) NULL AFTER `ubicacion_origen`;",
-            'observaciones'    => "ALTER TABLE `inventario_general` ADD COLUMN `observaciones` TEXT NULL AFTER `verificado`;",
-        ];
-
-        foreach ($columnasCubic as $col => $alter) {
-            if (!$this->db->fieldExists($col, 'inventario_general')) {
-                $this->db->query($alter);
-            }
-        }
-
-        // Si la tabla fue creada previamente sin las columnas de intervención o traslado, agregarlas
-        if (!$this->db->fieldExists('num_traslado', 'inventario_general')) {
-            $this->db->query("ALTER TABLE `inventario_general` ADD COLUMN `num_traslado` VARCHAR(100) NULL AFTER `identificador_2`;");
-            $this->db->query("ALTER TABLE `inventario_general` ADD KEY `idx_num_traslado` (`num_traslado`);");
-        }
-        if (!$this->db->fieldExists('intervenido', 'inventario_general')) {
-            $this->db->query("ALTER TABLE `inventario_general` ADD COLUMN `intervenido` TINYINT(1) DEFAULT 0 AFTER `usuario_cargue`;");
-            $this->db->query("ALTER TABLE `inventario_general` ADD KEY `idx_intervenido` (`intervenido`);");
-        }
-        if (!$this->db->fieldExists('fecha_intervencion', 'inventario_general')) {
-            $this->db->query("ALTER TABLE `inventario_general` ADD COLUMN `fecha_intervencion` DATETIME NULL AFTER `intervenido`;");
-        }
-        if (!$this->db->fieldExists('modulo_intervencion', 'inventario_general')) {
-            $this->db->query("ALTER TABLE `inventario_general` ADD COLUMN `modulo_intervencion` VARCHAR(50) NULL AFTER `fecha_intervencion`;");
-        }
-        if (!$this->db->fieldExists('analista_intervencion', 'inventario_general')) {
-            $this->db->query("ALTER TABLE `inventario_general` ADD COLUMN `analista_intervencion` VARCHAR(120) NULL AFTER `modulo_intervencion`;");
-        }
-
-        // Normalizar nombres históricos de módulos en la tabla
-        try {
-            $this->db->query("UPDATE `inventario_general` 
-                SET `modulo_intervencion` = 'Diagnóstico CPU' 
-                WHERE `modulo_intervencion` IN ('diagnostico', 'Diagnostico', 'diagnóstico', 'Diagnóstico')");
-            $this->db->query("UPDATE `inventario_general` 
-                SET `modulo_intervencion` = 'Diagnóstico Portátiles' 
-                WHERE `modulo_intervencion` IN ('portatil', 'portatiles', 'Portátil', 'Portátiles', 'Garantía Portátiles', 'Garantia Portatiles', 'garantia portatiles')");
-        } catch (\Throwable $e) {
-            // Ignorar silenciosamente si los campos o registros están en proceso de inicialización
-        }
-
-        // Eliminar base de datos externa 'base_de_datos' si aún existe en MySQL
-        try {
-            $this->db->query("DROP DATABASE IF EXISTS `base_de_datos`;");
-        } catch (\Throwable $e) {
-            // Ignorar si no existen permisos o no existe la base de datos
-        }
-
-        // Eliminar filas fantasma de encabezados, totales o filas sin placa ni serial
-        try {
-            $this->db->query("DELETE FROM `inventario_general` 
-                WHERE (
-                    (identificador_1 IS NULL OR TRIM(identificador_1) IN ('', '-', '—', 'N/A', 'NA', 'SIN-PLACA'))
-                    AND (identificador_2 IS NULL OR TRIM(identificador_2) IN ('', '-', '—', 'N/A', 'NA', 'SIN-SERIAL'))
-                    AND (placa_id IS NULL OR TRIM(placa_id) IN ('', '-', '—', 'N/A', 'NA', 'SIN-PLACA'))
-                    AND (serial IS NULL OR TRIM(serial) IN ('', '-', '—', 'N/A', 'NA', 'SIN-SERIAL'))
-                )
-                OR LOWER(TRIM(identificador_1)) IN ('identificador 1', 'identificador_1', 'identificador1', 'placa', 'placa_id', 'placa id', 'id 1', 'id1', 'activo', 'codigo', 'item', 'no', 'nro')
-                OR LOWER(TRIM(identificador_2)) IN ('identificador 2', 'identificador_2', 'identificador2', 'serial', 'serie', 'id 2', 'id2', 'sn', 's/n')
-                OR LOWER(TRIM(placa_id)) IN ('identificador 1', 'identificador_1', 'identificador1', 'placa', 'placa_id', 'placa id', 'total', 'totales')
-                OR LOWER(TRIM(placa_id)) LIKE 'total%'
-                OR LOWER(TRIM(identificador_1)) LIKE 'total%'
-                OR LOWER(TRIM(identificador_2)) LIKE 'total%'
-                OR LOWER(TRIM(descripcion)) LIKE 'total%';");
-        } catch (\Throwable $e) {
-            // Ignorar si la tabla aún se está construyendo
-        }
-
-        // Asegurar que registros antiguos tengan un created_at válido para filtros de tiempo
-        try {
-            $this->db->query("UPDATE `inventario_general` SET `created_at` = COALESCE(`fecha_intervencion`, NOW()) WHERE `created_at` IS NULL;");
-        } catch (\Throwable $e) {}
-
-        self::$tablaAsegurada = true;
-    }
 
     /**
      * Busca un equipo en inventario por coincidencia exacta con sus identificadores únicos (placa o serial).
@@ -174,17 +46,16 @@ class InventarioGeneralModel extends Model
      */
     public function buscarPorTermino(string $query): ?array
     {
-        $this->asegurarTabla();
         $queryLimpia = trim($query);
         if ($queryLimpia === '') {
             return null;
         }
         $exacto = $this->builder()
             ->groupStart()
-                ->where('identificador_1', $queryLimpia)
-                ->orWhere('identificador_2', $queryLimpia)
-                ->orWhere('placa_id', $queryLimpia)
-                ->orWhere('serial', $queryLimpia)
+                ->where('TRIM(identificador_1) =', $queryLimpia)
+                ->orWhere('TRIM(identificador_2) =', $queryLimpia)
+                ->orWhere('TRIM(placa_id) =', $queryLimpia)
+                ->orWhere('TRIM(serial) =', $queryLimpia)
             ->groupEnd()
             ->orderBy('id', 'DESC')
             ->get()
@@ -203,7 +74,6 @@ class InventarioGeneralModel extends Model
      */
     public function buscarTrasladoEnSistema(string $query, ?array $equipo = null): ?string
     {
-        $this->asegurarTabla();
         $db = $this->db;
 
         // 1. Si el equipo ya viene de inventario_general y tiene num_traslado, retornar su traslado original
@@ -381,7 +251,6 @@ class InventarioGeneralModel extends Model
      */
     public function marcarIntervenido(string $placaOserial, string $modulo, string $analista): bool
     {
-        $this->asegurarTabla();
         $termino = trim($placaOserial);
         if ($termino === '') {
             return false;
@@ -411,7 +280,6 @@ class InventarioGeneralModel extends Model
      */
     public function obtenerEstadisticasInventario(?string $fechaDesde = null, ?string $fechaHasta = null, ?string $nombreAnalista = null): array
     {
-        $this->asegurarTabla();
 
         $filtroAnalista = ($nombreAnalista !== null && trim($nombreAnalista) !== '') ? trim($nombreAnalista) : null;
 
@@ -489,7 +357,6 @@ class InventarioGeneralModel extends Model
      */
     public function sincronizarConSistema(): array
     {
-        $this->asegurarTabla();
         $db = $this->db;
 
         // Limpiar posibles filas artificiales previas
@@ -609,7 +476,6 @@ class InventarioGeneralModel extends Model
      */
     public function mapearTraslado(?string $numTraslado = null): array
     {
-        $this->asegurarTabla();
         $db = $this->db;
 
         // Limpiar cualquier fila artificial previa
@@ -739,7 +605,6 @@ class InventarioGeneralModel extends Model
      */
     public function obtenerTrasladosRegistrados(): array
     {
-        $this->asegurarTabla();
         $filas = $this->builder()
             ->select('num_traslado')
             ->where('num_traslado IS NOT NULL')
@@ -757,7 +622,6 @@ class InventarioGeneralModel extends Model
      */
     public function contarTrasladosRegistrados(): int
     {
-        $this->asegurarTabla();
         $row = $this->builder()
             ->select('COUNT(DISTINCT num_traslado) as total')
             ->where('num_traslado IS NOT NULL')
@@ -788,7 +652,6 @@ class InventarioGeneralModel extends Model
         ?int $analistaId = null,
         ?string $nombreAnalista = null
     ): array {
-        $this->asegurarTabla();
 
         $limite = max(1, $limite);
         $pagina = max(1, $pagina);
@@ -976,7 +839,6 @@ class InventarioGeneralModel extends Model
      */
     public function auditarMaquinasSinTraslado(): array
     {
-        $this->asegurarTabla();
         $db = $this->db;
 
         // 1. Totales globales en inventario_general
@@ -1136,7 +998,6 @@ class InventarioGeneralModel extends Model
      */
     public function recuperarTrasladosDesdeBitacoras(): array
     {
-        $this->asegurarTabla();
         $db = $this->db;
 
         $actualizadosEquipos = 0;

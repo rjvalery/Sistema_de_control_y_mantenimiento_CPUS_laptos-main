@@ -6,7 +6,7 @@ namespace App\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
 
-class CreateInventarioGeneral extends Migration
+class CreateGarantiasPortatiles extends Migration
 {
     public function up(): void
     {
@@ -17,137 +17,124 @@ class CreateInventarioGeneral extends Migration
                 'unsigned'       => true,
                 'auto_increment' => true,
             ],
-            'identificador_1' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 100,
-                'null'       => true,
-            ],
-            'identificador_2' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 100,
-                'null'       => true,
-            ],
-            'num_traslado' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 100,
-                'null'       => true,
-            ],
-            'ref_principal' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 150,
-                'null'       => true,
-            ],
-            'descripcion' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 255,
-                'null'       => true,
-            ],
-            'zona_origen' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 100,
-                'null'       => true,
-            ],
-            'ubicacion_origen' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 150,
-                'null'       => true,
-            ],
-            'verificado' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 50,
-                'null'       => true,
-            ],
-            'observaciones' => [
-                'type' => 'TEXT',
-                'null' => true,
-            ],
-            'placa_id' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 100,
-                'null'       => true,
-            ],
-            'serial' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 100,
-                'null'       => true,
-            ],
-            'tipo_equipo' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 80,
-                'null'       => true,
-            ],
-            'marca' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 100,
-                'null'       => true,
-            ],
-            'modelo' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 150,
-                'null'       => true,
-            ],
-            'ubicacion' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 150,
-                'null'       => true,
-            ],
-            'estado' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 80,
-                'null'       => true,
-            ],
-            'datos_adicionales' => [
-                'type' => 'TEXT',
-                'null' => true,
-            ],
-            'archivo_origen' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 255,
-                'null'       => true,
-            ],
-            'usuario_cargue' => [
+            'nombre_analista' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 120,
                 'null'       => true,
             ],
-            'intervenido' => [
-                'type'       => 'TINYINT',
-                'constraint' => 1,
-                'default'    => 0,
+            'numero_traslado' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 100,
+                'null'       => true,
             ],
-            'fecha_intervencion' => [
+            'placa_id_equipo' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 100,
+                'null'       => true,
+            ],
+            'tipo_gestion' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 100,
+                'null'       => true,
+            ],
+            'energiza' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 10,
+                'null'       => true,
+            ],
+            'da_video' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 10,
+                'null'       => true,
+            ],
+            'realizo_test_lenovo' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 10,
+                'null'       => true,
+            ],
+            'estado_actual_equipo' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 150,
+                'null'       => true,
+            ],
+            'diagnostico_laptop_intervenido' => [
+                'type' => 'TEXT',
+                'null' => true,
+            ],
+            'garantia' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 20,
+                'null'       => true,
+            ],
+            'porque_solicita_garantia' => [
+                'type' => 'TEXT',
+                'null' => true,
+            ],
+            'numero_ticket' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 100,
+                'null'       => true,
+            ],
+            'estado_final_equipo' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 150,
+                'null'       => true,
+            ],
+            'indique_pieza' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 150,
+                'null'       => true,
+            ],
+            'indique_fru' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 150,
+                'null'       => true,
+            ],
+            'pieza_intervenida' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 150,
+                'null'       => true,
+            ],
+            'origen_pieza' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 150,
+                'null'       => true,
+            ],
+            'motivo_baja' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 255,
+                'null'       => true,
+            ],
+            'serial_disco' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 120,
+                'null'       => true,
+            ],
+            'foto_ruta' => [
+                'type' => 'TEXT',
+                'null' => true,
+            ],
+            'created_at' => [
                 'type' => 'DATETIME',
                 'null' => true,
             ],
-            'modulo_intervencion' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 50,
-                'null'       => true,
-            ],
-            'analista_intervencion' => [
-                'type'       => 'VARCHAR',
-                'constraint' => 120,
-                'null'       => true,
-            ],
-            'created_at' => [
+            'fecha_creacion' => [
                 'type' => 'DATETIME',
                 'null' => true,
             ],
         ]);
 
         $this->forge->addKey('id', true);
-        $this->forge->addKey('identificador_1');
-        $this->forge->addKey('identificador_2');
-        $this->forge->addKey('num_traslado');
-        $this->forge->addKey('placa_id');
-        $this->forge->addKey('serial');
-        $this->forge->addKey('intervenido');
+        $this->forge->addKey('placa_id_equipo');
+        $this->forge->addKey('numero_traslado');
+        $this->forge->addKey('numero_ticket');
+        $this->forge->addKey('nombre_analista');
         
-        $this->forge->createTable('inventario_general', true);
+        $this->forge->createTable('garantias_portatiles', true);
     }
 
     public function down(): void
     {
-        $this->forge->dropTable('inventario_general', true);
+        $this->forge->dropTable('garantias_portatiles', true);
     }
 }

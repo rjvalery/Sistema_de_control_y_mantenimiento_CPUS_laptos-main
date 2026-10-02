@@ -85,6 +85,35 @@ class Usuarios extends BaseController
     }
 
     /**
+     * Guarda los permisos específicos de un usuario.
+     */
+    public function guardarPermisos(): ResponseInterface
+    {
+        if (session('usuario_rol') !== 'admin') {
+            return redirect()->to(base_url('dashboard'))->with('error', 'No tienes permisos para modificar permisos.');
+        }
+
+        $id = (int) $this->request->getPost('id');
+        $permisos = $this->request->getPost('permisos'); // Array of permission strings
+        
+        if (!is_array($permisos)) {
+            $permisos = [];
+        }
+
+        $usuario = $this->usuarioModel->find($id);
+        if (!$usuario) {
+            return redirect()->to(base_url('usuarios'))->with('error', 'Usuario no encontrado.');
+        }
+
+        // Convertir a JSON
+        $jsonPermisos = json_encode(array_values($permisos));
+
+        $this->usuarioModel->update($id, ['permisos' => $jsonPermisos]);
+
+        return redirect()->to(base_url('usuarios'))->with('msg', "Permisos de '{$usuario['nombre']}' actualizados correctamente.");
+    }
+
+    /**
      * Crea un nuevo usuario con rol asignado desde el módulo de usuarios.
      */
     public function crear(): ResponseInterface
@@ -96,7 +125,13 @@ class Usuarios extends BaseController
         $rules = [
             'nombre'   => 'required|min_length[3]|max_length[120]',
             'usuario'  => 'required|min_length[3]|max_length[60]|is_unique[usuarios.usuario]',
-            'password' => 'required|min_length[6]|max_length[255]',
+            'password' => [
+                'rules'  => 'required|min_length[8]|regex_match[/^(?=.*[A-Za-z])(?=.*\d).+$/]',
+                'errors' => [
+                    'min_length'  => 'La contraseña debe tener al menos 8 caracteres.',
+                    'regex_match' => 'La contraseña debe contener al menos una letra y un número.'
+                ]
+            ],
             'rol'      => 'required|in_list[admin,analista]',
         ];
 
@@ -130,11 +165,18 @@ class Usuarios extends BaseController
 
         $rules = [
             'id'             => 'required|is_natural_no_zero',
-            'nueva_password' => 'permit_empty|min_length[6]',
+            'nueva_password' => [
+                'rules'  => 'permit_empty|min_length[8]|regex_match[/^(?=.*[A-Za-z])(?=.*\d).+$/]',
+                'errors' => [
+                    'min_length'  => 'La nueva contraseña debe tener al menos 8 caracteres.',
+                    'regex_match' => 'La nueva contraseña debe contener al menos una letra y un número.'
+                ]
+            ],
         ];
 
         if (!$this->validate($rules)) {
-            return redirect()->to(base_url('usuarios'))->with('error', 'La nueva contraseña debe tener al menos 6 caracteres.');
+            $errores = implode(' ', $this->validator->getErrors());
+            return redirect()->to(base_url('usuarios'))->with('error', $errores);
         }
 
         $id      = (int) $this->request->getPost('id');
@@ -173,8 +215,19 @@ class Usuarios extends BaseController
 
         $rules = [
             'password_actual'    => 'required',
-            'password_nueva'     => 'required|min_length[6]',
-            'password_confirmar' => 'required|matches[password_nueva]',
+            'password_nueva'     => [
+                'rules'  => 'required|min_length[8]|regex_match[/^(?=.*[A-Za-z])(?=.*\d).+$/]',
+                'errors' => [
+                    'min_length'  => 'La nueva contraseña debe tener al menos 8 caracteres.',
+                    'regex_match' => 'La nueva contraseña debe contener al menos una letra y un número.'
+                ]
+            ],
+            'password_confirmar' => [
+                'rules'  => 'required|matches[password_nueva]',
+                'errors' => [
+                    'matches' => 'Las contraseñas nuevas no coinciden.'
+                ]
+            ],
         ];
 
         if (!$this->validate($rules)) {

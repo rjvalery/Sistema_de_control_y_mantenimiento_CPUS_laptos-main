@@ -13,7 +13,7 @@ class UsuarioModel extends Model
     protected $useAutoIncrement = true;
     protected $returnType       = 'array';
     protected $useTimestamps    = false;
-    protected $allowedFields    = ['nombre', 'usuario', 'password', 'rol', 'activo', 'created_at'];
+    protected $allowedFields    = ['nombre', 'usuario', 'password', 'rol', 'activo', 'permisos', 'created_at'];
 
     protected $validationRules  = [
         'nombre'   => 'required|min_length[3]|max_length[120]',

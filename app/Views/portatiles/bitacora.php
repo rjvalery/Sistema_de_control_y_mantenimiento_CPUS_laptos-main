@@ -22,7 +22,9 @@
                 ], fn($val) => $val !== '');
                 $urlExcel = base_url('portatiles/exportar') . (!empty($paramsExcel) ? '?' . http_build_query($paramsExcel) : '');
             ?>
+            <?php if (has_permission('exportar_excel')): ?>
             <a href="<?= $urlExcel ?>" class="btn btn-success btn-sm"><i class="fa-solid fa-file-excel me-1"></i> Excel (<?= number_format($totalFiltrados ?? count($registros)) ?>)</a>
+            <?php endif; ?>
         </div>
     </div>
     <div class="card-body p-4">

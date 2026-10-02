@@ -18,8 +18,8 @@ class UploadService
         }
 
         $rawDir = ($categoria === 'diagnostico')
-            ? (env('app.rutaDiagnosticos') ?: env('uploads.diagnostico', 'C:/Users/LENOVO/Pictures/fotos/diagnostico'))
-            : env("uploads.{$categoria}", 'C:/Users/LENOVO/Pictures/fotos/' . $categoria);
+            ? (env('app.rutaDiagnosticos') ?: env('uploads.diagnostico', WRITEPATH . 'uploads/diagnostico'))
+            : env("uploads.{$categoria}", WRITEPATH . 'uploads/' . $categoria);
 
         $baseDir = rtrim(str_replace('\\', '/', (string) $rawDir), '/');
 

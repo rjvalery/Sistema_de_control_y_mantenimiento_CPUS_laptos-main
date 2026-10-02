@@ -25,7 +25,7 @@ abstract class BaseController extends Controller
     /**
      * Helpers cargados para todos los controladores que extienden BaseController.
      */
-    protected $helpers = ['url', 'form'];
+    protected $helpers = ['url', 'form', 'auth'];
 
     /**
      * @return void
@@ -63,5 +63,32 @@ abstract class BaseController extends Controller
         }
 
         return $this->response->setStatusCode($code)->setJSON($payload);
+    }
+
+    /**
+     * Retorna una respuesta de descarga CSV estandarizada (con BOM UTF-8).
+     */
+    protected function exportarCsvResponse(array $headers, array $data, string $filename, string $delimiter = ';'): ResponseInterface
+    {
+        $output = "\xEF\xBB\xBF"; // UTF-8 BOM
+        $output .= implode($delimiter, $headers) . "\r\n";
+        
+        foreach ($data as $row) {
+            $cleanedRow = array_map(function ($val) {
+                if ($val === null) return '';
+                // Limpiar saltos de línea y escapar comillas dobles
+                $val = str_replace(["\r\n", "\r", "\n", '"'], [' ', ' ', ' ', '""'], (string)$val);
+                return '"' . $val . '"';
+            }, $row);
+            
+            $output .= implode($delimiter, $cleanedRow) . "\r\n";
+        }
+
+        return $this->response
+            ->setHeader('Content-Type', 'text/csv; charset=utf-8')
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+            ->setHeader('Pragma', 'no-cache')
+            ->setHeader('Expires', '0')
+            ->setBody($output);
     }
 }

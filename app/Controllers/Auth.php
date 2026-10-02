@@ -35,6 +35,15 @@ class Auth extends BaseController
             return redirect()->back()->withInput()->with('error', 'Por favor ingrese un usuario y contraseña válidos.');
         }
 
+        // Protección contra fuerza bruta (Rate Limiting)
+        // Permite un máximo de 5 intentos por cada 5 minutos desde la misma IP
+        $throttler = \Config\Services::throttler();
+        $ipAddress = $this->request->getIPAddress();
+        
+        if ($throttler->check('login_attempt_' . $ipAddress, 5, 5 * MINUTE) === false) {
+            return redirect()->back()->withInput()->with('error', 'Demasiados intentos fallidos. Por seguridad, por favor espera 5 minutos antes de volver a intentarlo.');
+        }
+
         $usuario  = trim((string) $this->request->getPost('usuario'));
         $password = (string) $this->request->getPost('password');
 
@@ -50,6 +59,7 @@ class Auth extends BaseController
             'usuario_nombre' => $user['nombre'],
             'usuario_user'   => $user['usuario'],
             'usuario_rol'    => $user['rol'],
+            'usuario_permisos' => $user['permisos'],
         ]);
 
         return redirect()->to(site_url('dashboard'));

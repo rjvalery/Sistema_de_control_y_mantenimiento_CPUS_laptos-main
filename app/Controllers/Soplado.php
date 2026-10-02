@@ -100,8 +100,11 @@ class Soplado extends BaseController
                 return redirect()->to(base_url('soplado/formulario'))->with('msg', 'Registro y evidencia guardados correctamente.');
             }
 
+            $errores = $this->sopladoModel->errors();
+            $msgError = !empty($errores) ? implode(', ', $errores) : 'Verifique los datos ingresados.';
+
             if ($isAjax) {
-                return $this->respondError('Error al guardar en la base de datos.');
+                return $this->respondError('Error de validación al guardar: ' . $msgError);
             }
 
             return redirect()->back()->withInput()->with('error', 'Error al guardar en base de datos.');
@@ -148,44 +151,31 @@ class Soplado extends BaseController
             $fechaHasta !== '' ? $fechaHasta : null
         );
 
-        $filename    = "Reporte_Soplado_CPUs_" . date('Ymd_His') . ".csv";
-        $delimitador = ';';
-
+        $filename = "Reporte_Soplado_CPUs_" . date('Ymd_His') . ".csv";
         $headers = [
             'ID', 'Fecha/Hora', 'Analista', 'N° Traslado',
             'Placa ID', 'Energiza', 'Da Video', 'Detecta Disco',
             'Ingresó BIOS', 'Pasta Térmica', 'Gel Cucarachas', 'Contenido Máquina'
         ];
 
-        $output = "\xEF\xBB\xBF"; // UTF-8 BOM para apertura directa en Excel
-        $output .= implode($delimitador, $headers) . "\r\n";
-
+        $data = [];
         foreach ($registros as $row) {
-            $contenido = str_replace(["\r\n", "\r", "\n", '"'], [' ', ' ', ' ', '""'], (string)($row['maquina_contenia'] ?? '-'));
-
-            $line = [
+            $data[] = [
                 $row['id'],
                 $row['created_at'] ?? ($row['fecha_creacion'] ?? ''),
-                '"' . str_replace('"', '""', (string)($row['nombre_analista'] ?? '')) . '"',
-                '"' . str_replace('"', '""', (string)($row['num_traslado'] ?? '')) . '"',
-                '"' . str_replace('"', '""', (string)($row['placa_id'] ?? '')) . '"',
-                '"' . str_replace('"', '""', (string)($row['energiza'] ?? '-')) . '"',
-                '"' . str_replace('"', '""', (string)($row['da_video'] ?? '-')) . '"',
-                '"' . str_replace('"', '""', (string)($row['detecta_disco'] ?? '-')) . '"',
-                '"' . str_replace('"', '""', (string)($row['ingreso_bios'] ?? '-')) . '"',
-                '"' . str_replace('"', '""', (string)($row['pasta_termica'] ?? '-')) . '"',
-                '"' . str_replace('"', '""', (string)($row['gel_cucarachas'] ?? '-')) . '"',
-                '"' . $contenido . '"',
+                $row['nombre_analista'] ?? '',
+                $row['num_traslado'] ?? '',
+                $row['placa_id'] ?? '',
+                $row['energiza'] ?? '-',
+                $row['da_video'] ?? '-',
+                $row['detecta_disco'] ?? '-',
+                $row['ingreso_bios'] ?? '-',
+                $row['pasta_termica'] ?? '-',
+                $row['gel_cucarachas'] ?? '-',
+                $row['maquina_contenia'] ?? '-'
             ];
-
-            $output .= implode($delimitador, $line) . "\r\n";
         }
 
-        return $this->response
-            ->setHeader('Content-Type', 'text/csv; charset=utf-8')
-            ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
-            ->setHeader('Pragma', 'no-cache')
-            ->setHeader('Expires', '0')
-            ->setBody($output);
+        return $this->exportarCsvResponse($headers, $data, $filename);
     }
 }

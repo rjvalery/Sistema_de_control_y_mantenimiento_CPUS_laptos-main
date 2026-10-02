@@ -116,8 +116,11 @@ class Portatiles extends BaseController
                 return redirect()->to(base_url('portatiles/formulario'))->with('msg', 'Registro de portátiles guardado correctamente.');
             }
 
+            $errores = $this->portatilModel->errors();
+            $msgError = !empty($errores) ? implode(', ', $errores) : 'Verifique los datos ingresados.';
+
             if ($isAjax) {
-                return $this->respondError('Error al guardar en la base de datos.');
+                return $this->respondError('Error de validación al guardar: ' . $msgError);
             }
 
             return redirect()->back()->withInput()->with('error', 'Error al guardar en base de datos.');
@@ -254,9 +257,7 @@ class Portatiles extends BaseController
             $fechaHasta !== '' ? $fechaHasta : null
         );
 
-        $filename    = "Reporte_Portatiles_Garantias_" . date('Ymd_His') . ".csv";
-        $delimitador = ';';
-
+        $filename = "Reporte_Portatiles_Garantias_" . date('Ymd_His') . ".csv";
         $headers = [
             'ID', 'Fecha', 'Analista', 'N° Traslado', 'Placa ID',
             'Gestión', 'Energiza', 'Da Video', 'Test Lenovo', 'Estado Actual',
@@ -265,46 +266,33 @@ class Portatiles extends BaseController
             'Origen Pieza', 'Serial Disco', 'Motivo Baja'
         ];
 
-        $output = "\xEF\xBB\xBF"; // UTF-8 BOM para apertura directa en Excel
-        $output .= implode($delimitador, $headers) . "\r\n";
-
+        $data = [];
         foreach ($registros as $row) {
-            $diagnostico = str_replace(["\r\n", "\r", "\n", '"'], [' ', ' ', ' ', '""'], (string)($row['diagnostico_laptop_intervenido'] ?? '-'));
-            $razon = str_replace(["\r\n", "\r", "\n", '"'], [' ', ' ', ' ', '""'], (string)($row['porque_solicita_garantia'] ?? '-'));
-            $motivoBaja = str_replace(["\r\n", "\r", "\n", '"'], [' ', ' ', ' ', '""'], (string)($row['motivo_baja'] ?? '-'));
-
-            $line = [
+            $data[] = [
                 $row['id'],
                 $row['created_at'] ?? '',
-                '"' . str_replace('"', '""', (string)($row['nombre_analista'] ?? '')) . '"',
-                '"' . str_replace('"', '""', (string)($row['numero_traslado'] ?? '')) . '"',
-                '"' . str_replace('"', '""', (string)($row['placa_id_equipo'] ?? '')) . '"',
-                '"' . str_replace('"', '""', (string)($row['tipo_gestion'] ?? '')) . '"',
-                '"' . str_replace('"', '""', (string)($row['energiza'] ?? '-')) . '"',
-                '"' . str_replace('"', '""', (string)($row['da_video'] ?? '-')) . '"',
-                '"' . str_replace('"', '""', (string)($row['realizo_test_lenovo'] ?? '-')) . '"',
-                '"' . str_replace('"', '""', (string)($row['estado_actual_equipo'] ?? '-')) . '"',
-                '"' . $diagnostico . '"',
-                '"' . str_replace('"', '""', (string)($row['garantia'] ?? '-')) . '"',
-                '"' . str_replace('"', '""', (string)($row['numero_ticket'] ?? '-')) . '"',
-                '"' . $razon . '"',
-                '"' . str_replace('"', '""', (string)($row['estado_final_equipo'] ?? '-')) . '"',
-                '"' . str_replace('"', '""', (string)($row['indique_pieza'] ?? '-')) . '"',
-                '"' . str_replace('"', '""', (string)($row['indique_fru'] ?? '-')) . '"',
-                '"' . str_replace('"', '""', (string)($row['pieza_intervenida'] ?? '-')) . '"',
-                '"' . str_replace('"', '""', (string)($row['origen_pieza'] ?? '-')) . '"',
-                '"' . str_replace('"', '""', (string)($row['serial_disco'] ?? '-')) . '"',
-                '"' . $motivoBaja . '"',
+                $row['nombre_analista'] ?? '',
+                $row['numero_traslado'] ?? '',
+                $row['placa_id_equipo'] ?? '',
+                $row['tipo_gestion'] ?? '',
+                $row['energiza'] ?? '-',
+                $row['da_video'] ?? '-',
+                $row['realizo_test_lenovo'] ?? '-',
+                $row['estado_actual_equipo'] ?? '-',
+                $row['diagnostico_laptop_intervenido'] ?? '-',
+                $row['garantia'] ?? '-',
+                $row['numero_ticket'] ?? '-',
+                $row['porque_solicita_garantia'] ?? '-',
+                $row['estado_final_equipo'] ?? '-',
+                $row['indique_pieza'] ?? '-',
+                $row['indique_fru'] ?? '-',
+                $row['pieza_intervenida'] ?? '-',
+                $row['origen_pieza'] ?? '-',
+                $row['serial_disco'] ?? '-',
+                $row['motivo_baja'] ?? '-'
             ];
-
-            $output .= implode($delimitador, $line) . "\r\n";
         }
 
-        return $this->response
-            ->setHeader('Content-Type', 'text/csv; charset=utf-8')
-            ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
-            ->setHeader('Pragma', 'no-cache')
-            ->setHeader('Expires', '0')
-            ->setBody($output);
+        return $this->exportarCsvResponse($headers, $data, $filename);
     }
 }

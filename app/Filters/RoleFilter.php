@@ -8,12 +8,21 @@ use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 
-class GuestFilter implements FilterInterface
+class RoleFilter implements FilterInterface
 {
     public function before(RequestInterface $request, $arguments = null): \CodeIgniter\HTTP\ResponseInterface|string|null
     {
-        if (session()->get('usuario_id')) {
-            return redirect()->to(site_url('dashboard'));
+        if (! session()->has('usuario_id')) {
+            return redirect()->to('/login');
+        }
+
+        if (empty($arguments)) {
+            return null;
+        }
+
+        $rol = session('usuario_rol');
+        if (! in_array($rol, $arguments, true)) {
+            return redirect()->to('/dashboard')->with('error', 'No tienes permisos para acceder a esta sección.');
         }
 
         return null;

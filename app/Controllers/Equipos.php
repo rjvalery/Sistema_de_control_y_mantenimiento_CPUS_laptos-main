@@ -105,7 +105,9 @@ class Equipos extends BaseController
                 return $this->respondSuccess([], 'Guardado correctamente');
             }
 
-            return $this->respondError('Error al guardar en base de datos');
+            $errores = $this->equipoModel->errors();
+            $msgError = !empty($errores) ? implode(', ', $errores) : 'Verifique los datos ingresados.';
+            return $this->respondError('Error de validación al guardar: ' . $msgError);
         } catch (\Throwable $e) {
             log_message('error', 'Error al guardar diagnóstico: ' . $e->getMessage());
             return $this->respondError('Error al guardar en base de datos: ' . $e->getMessage());
@@ -148,9 +150,7 @@ class Equipos extends BaseController
             $fechaHasta !== '' ? $fechaHasta : null
         );
 
-        $filename    = "Reporte_Equipos_Diagnostico_" . date('Ymd_His') . ".csv";
-        $delimitador = ';';
-
+        $filename = "Reporte_Equipos_Diagnostico_" . date('Ymd_His') . ".csv";
         $headers = [
             'ID', 'Fecha/Hora', 'Analista', 'N° Traslado',
             'Placa ID', 'Gestión', 'Energiza', 'Da Video',
@@ -158,39 +158,27 @@ class Equipos extends BaseController
             'Motivo Baja', 'Serial Disco', 'Ubicación Destino'
         ];
 
-        $output = "\xEF\xBB\xBF"; // UTF-8 BOM para apertura directa en Excel
-        $output .= implode($delimitador, $headers) . "\r\n";
-
+        $data = [];
         foreach ($registros as $row) {
-            $novedad = str_replace(["\r\n", "\r", "\n", '"'], [' ', ' ', ' ', '""'], (string)($row['descripcion_novedad'] ?? '-'));
-            $motivoBaja = str_replace(["\r\n", "\r", "\n", '"'], [' ', ' ', ' ', '""'], (string)($row['motivo_baja'] ?? '-'));
-
-            $line = [
+            $data[] = [
                 $row['id'],
                 $row['fecha_creacion'],
-                '"' . str_replace('"', '""', (string)($row['nombre_analista'] ?? '')) . '"',
-                '"' . str_replace('"', '""', (string)($row['num_traslado'] ?? '')) . '"',
-                '"' . str_replace('"', '""', (string)($row['placa_id'] ?? '')) . '"',
-                '"' . str_replace('"', '""', (string)($row['tipo_gestion'] ?? '')) . '"',
-                '"' . str_replace('"', '""', (string)($row['energiza'] ?? '-')) . '"',
-                '"' . str_replace('"', '""', (string)($row['da_video'] ?? '-')) . '"',
-                '"' . str_replace('"', '""', (string)($row['estado_actual'] ?? '-')) . '"',
-                '"' . str_replace('"', '""', (string)($row['que_va_intervenir'] ?? '-')) . '"',
-                '"' . str_replace('"', '""', (string)($row['origen_pieza'] ?? '-')) . '"',
-                '"' . $novedad . '"',
-                '"' . $motivoBaja . '"',
-                '"' . str_replace('"', '""', (string)($row['serial_disco'] ?? '-')) . '"',
-                '"' . str_replace('"', '""', (string)($row['ubicacion_destino'] ?? '-')) . '"',
+                $row['nombre_analista'] ?? '',
+                $row['num_traslado'] ?? '',
+                $row['placa_id'] ?? '',
+                $row['tipo_gestion'] ?? '',
+                $row['energiza'] ?? '-',
+                $row['da_video'] ?? '-',
+                $row['estado_actual'] ?? '-',
+                $row['que_va_intervenir'] ?? '-',
+                $row['origen_pieza'] ?? '-',
+                $row['descripcion_novedad'] ?? '-',
+                $row['motivo_baja'] ?? '-',
+                $row['serial_disco'] ?? '-',
+                $row['ubicacion_destino'] ?? '-'
             ];
-
-            $output .= implode($delimitador, $line) . "\r\n";
         }
 
-        return $this->response
-            ->setHeader('Content-Type', 'text/csv; charset=utf-8')
-            ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
-            ->setHeader('Pragma', 'no-cache')
-            ->setHeader('Expires', '0')
-            ->setBody($output);
+        return $this->exportarCsvResponse($headers, $data, $filename);
     }
 }

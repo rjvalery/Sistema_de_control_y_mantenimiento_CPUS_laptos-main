@@ -181,32 +181,38 @@ let optimizacionPromesa = null;
 
 function manejarSeleccionFoto(input) {
     if (!input.files || !input.files[0]) return;
+    
+    const file = input.files[0];
     const principal = document.getElementById('foto_equipo');
+    
     if (principal) {
         principal.required = false;
         try {
             if (window.DataTransfer) {
                 const dt = new DataTransfer();
-                dt.items.add(input.files[0]);
+                dt.items.add(file);
                 principal.files = dt.files;
             }
         } catch (e) {}
     }
-    optimizarImagen(input);
+    
+    optimizarImagen(file);
+    
+    // Limpiar el valor del input para que el evento onchange vuelva a dispararse 
+    // incluso si la tablet/teléfono asigna el mismo nombre temporal (ej. image.jpg)
+    input.value = '';
 }
 
-function optimizarImagen(input) {
+function optimizarImagen(file) {
     const previewContainer = document.getElementById('preview-container');
     const preview = document.getElementById('preview');
     const uploadLabel = document.getElementById('upload-label');
 
-    if (!input.files || !input.files[0]) {
+    if (!file) {
         fotoOptimBlob = null;
         optimizacionPromesa = null;
         return;
     }
-
-    const file = input.files[0];
 
     // 1. VISTA PREVIA INSTANTÁNEA (0 ms): el analista ve su foto al instante
     const instantUrl = URL.createObjectURL(file);

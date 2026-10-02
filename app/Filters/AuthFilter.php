@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filters;
 
 use CodeIgniter\Filters\FilterInterface;
@@ -8,7 +10,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 class AuthFilter implements FilterInterface
 {
-    public function before(RequestInterface $request, $arguments = null)
+    public function before(RequestInterface $request, $arguments = null): \CodeIgniter\HTTP\ResponseInterface|string|null
     {
         if (! session()->get('usuario_id')) {
             if ($request->isAJAX() || $request->hasHeader('X-Requested-With')) {
@@ -25,7 +27,7 @@ class AuthFilter implements FilterInterface
         return null;
     }
 
-    public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
+    public function after(RequestInterface $request, ResponseInterface $response, $arguments = null): \CodeIgniter\HTTP\ResponseInterface|string|null
     {
         return null;
     }
