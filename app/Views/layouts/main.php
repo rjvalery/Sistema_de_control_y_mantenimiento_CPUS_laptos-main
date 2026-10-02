@@ -45,7 +45,7 @@
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fa-solid fa-desktop me-1"></i> Diagnóstico
+                            <i class="fa-solid fa-desktop me-1"></i> Diagnóstico CPU
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="<?= base_url('equipos/formulario') ?>"><i class="fa-solid fa-plus me-2 text-primary"></i>Nuevo Registro</a></li>
@@ -63,7 +63,7 @@
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fa-solid fa-laptop me-1"></i> Portátiles
+                            <i class="fa-solid fa-laptop me-1"></i> Diagnóstico Portátiles
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="<?= base_url('portatiles/formulario') ?>"><i class="fa-solid fa-plus me-2 text-success"></i>Nuevo Diagnóstico</a></li>

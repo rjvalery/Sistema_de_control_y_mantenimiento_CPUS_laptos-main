@@ -100,7 +100,7 @@ class Equipos extends BaseController
         try {
             if ($this->equipoModel->insert($data)) {
                 // Sincronizar y descontar de pendientes en inventario general
-                $this->inventarioModel->marcarIntervenido((string)$placaId, 'diagnostico', $nombreAnalista);
+                $this->inventarioModel->marcarIntervenido((string)$placaId, 'Diagnóstico CPU', $nombreAnalista);
 
                 return $this->respondSuccess([], 'Guardado correctamente');
             }

@@ -121,6 +121,18 @@ class InventarioGeneralModel extends Model
             $this->db->query("ALTER TABLE `inventario_general` ADD COLUMN `analista_intervencion` VARCHAR(120) NULL AFTER `modulo_intervencion`;");
         }
 
+        // Normalizar nombres históricos de módulos en la tabla
+        try {
+            $this->db->query("UPDATE `inventario_general` 
+                SET `modulo_intervencion` = 'Diagnóstico CPU' 
+                WHERE `modulo_intervencion` IN ('diagnostico', 'Diagnostico', 'diagnóstico', 'Diagnóstico')");
+            $this->db->query("UPDATE `inventario_general` 
+                SET `modulo_intervencion` = 'Diagnóstico Portátiles' 
+                WHERE `modulo_intervencion` IN ('portatil', 'portatiles', 'Portátil', 'Portátiles', 'Garantía Portátiles', 'Garantia Portatiles', 'garantia portatiles')");
+        } catch (\Throwable $e) {
+            // Ignorar silenciosamente si los campos o registros están en proceso de inicialización
+        }
+
         // Eliminar base de datos externa 'base_de_datos' si aún existe en MySQL
         try {
             $this->db->query("DROP DATABASE IF EXISTS `base_de_datos`;");
@@ -354,7 +366,7 @@ class InventarioGeneralModel extends Model
                     'estado'                => $reg['estado_actual_equipo'] ?? '',
                     'intervenido'           => 1,
                     'fecha_intervencion'    => $reg['created_at'] ?? $reg['fecha_creacion'] ?? null,
-                    'modulo_intervencion'   => 'Portátiles',
+                    'modulo_intervencion'   => 'Diagnóstico Portátiles',
                     'analista_intervencion' => $reg['nombre_analista'] ?? '',
                     'origen_datos'          => 'historial_sistema',
                 ];
@@ -565,7 +577,7 @@ class InventarioGeneralModel extends Model
                             WHEN ig.verificado IS NULL OR ig.verificado = '' OR ig.verificado = 'Pendiente' THEN 'Cargado' 
                             ELSE ig.verificado 
                         END,
-                        ig.modulo_intervencion = COALESCE(ig.modulo_intervencion, 'Garantía Portátiles'),
+                        ig.modulo_intervencion = COALESCE(ig.modulo_intervencion, 'Diagnóstico Portátiles'),
                         ig.analista_intervencion = COALESCE(ig.analista_intervencion, gp.nombre_analista),
                         ig.fecha_intervencion = COALESCE(ig.fecha_intervencion, {$fechaColGp}, NOW());";
                 $db->query($sqlPortatiles);
@@ -687,7 +699,7 @@ class InventarioGeneralModel extends Model
                     ig.intervenido = 1,
                     ig.estado = 'Cargado',
                     ig.verificado = 'Cargado',
-                    ig.modulo_intervencion = COALESCE(ig.modulo_intervencion, 'Garantía Portátiles'),
+                    ig.modulo_intervencion = COALESCE(ig.modulo_intervencion, 'Diagnóstico Portátiles'),
                     ig.analista_intervencion = COALESCE(ig.analista_intervencion, gp.nombre_analista),
                     ig.fecha_intervencion = COALESCE(ig.fecha_intervencion, {$fechaColGp}, NOW())
                 {$whereTraslado};");

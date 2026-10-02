@@ -324,7 +324,7 @@
             <div class="pbi-widget-header">
                 <div>
                     <h2 class="pbi-widget-title">Distribución de Trabajo por Línea Técnica</h2>
-                    <div class="text-muted" style="font-size: 0.72rem;">Diagnóstico CPU, Mantenimiento Soplado y Garantías Portátiles</div>
+                    <div class="text-muted" style="font-size: 0.72rem;">Diagnóstico CPU, Mantenimiento Soplado y Diagnóstico Portátiles</div>
                 </div>
                 <span class="badge bg-light text-secondary border fw-semibold" style="font-size: 0.72rem;" id="badgeTotalIntervencionesGrafico">
                     <?= number_format((int)$totalIntervenciones) ?> Registros
@@ -349,7 +349,7 @@
                         <span class="text-muted ms-1" style="font-size: 0.68rem;" id="metricSpPct">(<?= $porcSp ?>%)</span>
                     </div>
                     <div class="col-4">
-                        <span class="text-muted d-block" style="font-size: 0.7rem;">PORTÁTILES</span>
+                        <span class="text-muted d-block" style="font-size: 0.7rem;">DIAGNÓSTICO PORTÁTILES</span>
                         <strong style="color: var(--pbi-purple);" id="metricPtVal"><?= number_format((int)$totalPortatiles) ?></strong>
                         <span class="text-muted ms-1" style="font-size: 0.68rem;" id="metricPtPct">(<?= $porcPt ?>%)</span>
                     </div>
@@ -441,20 +441,23 @@
                             <td>
                                 <?php 
                                     $mod = strtolower((string)($m['modulo_intervencion'] ?? ''));
-                                    if (str_contains($mod, 'diagn') || str_contains($mod, 'cpu')) {
-                                        $badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
-                                        $icono = 'fa-desktop';
+                                    if (str_contains($mod, 'portat') || str_contains($mod, 'laptop')) {
+                                        $badgeClass = 'bg-purple-subtle text-purple border';
+                                        $icono = 'fa-laptop';
+                                        $labelMod = 'Diagnóstico Portátiles';
                                     } elseif (str_contains($mod, 'sopla') || str_contains($mod, 'limpie')) {
                                         $badgeClass = 'bg-info-subtle text-info border border-info-subtle';
                                         $icono = 'fa-wind';
+                                        $labelMod = 'Soplado';
                                     } else {
-                                        $badgeClass = 'bg-purple-subtle text-purple border';
-                                        $icono = 'fa-laptop';
+                                        $badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
+                                        $icono = 'fa-desktop';
+                                        $labelMod = 'Diagnóstico CPU';
                                     }
                                 ?>
                                 <span class="pbi-badge <?= $badgeClass ?>" style="<?= str_contains($badgeClass, 'text-purple') ? 'background-color: #f5f3ff; color: #7c3aed; border-color: #ddd6fe !important;' : '' ?>">
                                     <i class="fa-solid <?= $icono ?>"></i>
-                                    <span><?= esc((string)($m['modulo_intervencion'] ?: 'Diagnóstico')) ?></span>
+                                    <span><?= esc($labelMod) ?></span>
                                 </span>
                             </td>
                             <td>
@@ -522,7 +525,7 @@ let totalRegistros = <?= (int)($total_registros ?? count($maquinasIntervenidas))
 // Configuración inicial de datos analíticos
 const dataAnalytics = {
     lineas: {
-        labels: ['Diagnóstico CPU', 'Mantenimiento Soplado', 'Garantías Portátiles'],
+        labels: ['Diagnóstico CPU', 'Mantenimiento Soplado', 'Diagnóstico Portátiles'],
         valores: [<?= (int)$totalEquipos ?>, <?= (int)$totalSoplado ?>, <?= (int)$totalPortatiles ?>]
     },
     cumplimiento: {
@@ -874,17 +877,24 @@ function actualizarMatrizMaquinas(maquinas) {
         let badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
         let icono = 'fa-desktop';
         let customStyle = '';
+        let labelMod = 'Diagnóstico CPU';
 
-        if (mod.includes('sopla') || mod.includes('limpie')) {
-            badgeClass = 'bg-info-subtle text-info border border-info-subtle';
-            icono = 'fa-wind';
-        } else if (mod.includes('porta') || mod.includes('laptop')) {
+        if (mod.includes('porta') || mod.includes('laptop')) {
             badgeClass = 'bg-purple-subtle text-purple border';
             icono = 'fa-laptop';
             customStyle = 'style="background-color: #f5f3ff; color: #7c3aed; border-color: #ddd6fe !important;"';
+            labelMod = 'Diagnóstico Portátiles';
+        } else if (mod.includes('sopla') || mod.includes('limpie')) {
+            badgeClass = 'bg-info-subtle text-info border border-info-subtle';
+            icono = 'fa-wind';
+            labelMod = 'Soplado';
+        } else {
+            badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
+            icono = 'fa-desktop';
+            labelMod = 'Diagnóstico CPU';
         }
 
-        const moduloHtml = `<span class="pbi-badge ${badgeClass}" ${customStyle}><i class="fa-solid ${icono}"></i> <span>${escapeHtml(m.modulo_intervencion || 'Diagnóstico')}</span></span>`;
+        const moduloHtml = `<span class="pbi-badge ${badgeClass}" ${customStyle}><i class="fa-solid ${icono}"></i> <span>${escapeHtml(labelMod)}</span></span>`;
         const analista = m.analista_intervencion 
             ? `<span class="text-dark"><i class="fa-regular fa-user text-muted me-1"></i>${escapeHtml(m.analista_intervencion)}</span>` 
             : '<span class="text-muted">—</span>';

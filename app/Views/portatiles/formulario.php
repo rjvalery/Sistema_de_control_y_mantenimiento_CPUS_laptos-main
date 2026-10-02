@@ -7,7 +7,7 @@
     <div class="col-md-10 col-lg-8">
         <div class="card shadow-sm border-0">
             <div class="card-header bg-primary text-white py-3">
-                <h5 class="mb-0 fs-6"><i class="fa-solid fa-laptop me-2"></i>Garantías e Intervención de Portátiles</h5>
+                <h5 class="mb-0 fs-6"><i class="fa-solid fa-laptop me-2"></i>Diagnóstico e Intervención de Portátiles</h5>
             </div>
             <div class="card-body p-4">
 

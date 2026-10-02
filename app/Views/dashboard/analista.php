@@ -312,7 +312,7 @@
                         <div class="d-flex align-items-center gap-2">
                             <span class="p-2 rounded bg-purple-subtle text-purple" style="background-color: #f3e8ff; color: #7e22ce;"><i class="fa-solid fa-laptop"></i></span>
                             <div>
-                                <span class="fw-bold text-dark d-block">Garantías Portátiles</span>
+                                <span class="fw-bold text-dark d-block">Diagnóstico Portátiles</span>
                                 <small class="text-muted">Laptops Lenovo / FRU</small>
                             </div>
                         </div>
@@ -407,19 +407,22 @@
                                 <td>
                                     <?php 
                                         $mod = strtolower((string)($m['modulo_intervencion'] ?? ''));
-                                        if (str_contains($mod, 'diagn') || str_contains($mod, 'cpu')) {
-                                            $badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
-                                            $icono = 'fa-desktop';
+                                        if (str_contains($mod, 'portat') || str_contains($mod, 'laptop')) {
+                                            $badgeClass = 'bg-success-subtle text-success border border-success-subtle';
+                                            $icono = 'fa-laptop';
+                                            $labelMod = 'Diagnóstico Portátiles';
                                         } elseif (str_contains($mod, 'sopla') || str_contains($mod, 'limpie')) {
                                             $badgeClass = 'bg-info-subtle text-info border border-info-subtle';
                                             $icono = 'fa-wind';
+                                            $labelMod = 'Soplado';
                                         } else {
-                                            $badgeClass = 'bg-success-subtle text-success border border-success-subtle';
-                                            $icono = 'fa-laptop';
+                                            $badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
+                                            $icono = 'fa-desktop';
+                                            $labelMod = 'Diagnóstico CPU';
                                         }
                                     ?>
                                     <span class="badge <?= $badgeClass ?> fw-semibold px-2 py-1">
-                                        <i class="fa-solid <?= $icono ?> me-1"></i><?= esc((string)($m['modulo_intervencion'] ?: 'Agregado al Sistema')) ?>
+                                        <i class="fa-solid <?= $icono ?> me-1"></i><?= esc($labelMod) ?>
                                     </span>
                                 </td>
                                 <td>
@@ -499,7 +502,7 @@ const metricasData = {
         titulo: 'Intervenciones por Módulo',
         centerValor: '<?= number_format((int)$totalIntervenciones) ?>',
         centerTexto: 'Intervenciones',
-        labels: ['Diagnóstico CPU', 'Mantenimiento Soplado', 'Garantías Portátiles'],
+        labels: ['Diagnóstico CPU', 'Mantenimiento Soplado', 'Diagnóstico Portátiles'],
         valores: [<?= (int)$totalEquipos ?>, <?= (int)$totalSoplado ?>, <?= (int)$totalPortatiles ?>],
         colores: ['#3b82f6', '#06b6d4', '#8b5cf6'], // Azul eléctrico, Cian y Violeta
         iconos: ['fa-desktop', 'fa-wind', 'fa-laptop']
@@ -762,17 +765,25 @@ function actualizarTablaMaquinas(maquinas) {
         const modelo = escapeHtml(m.ref_principal || m.modelo || m.descripcion || 'Equipo Taller');
 
         let mod = (m.modulo_intervencion || '').toLowerCase();
-        let badgeClass = 'bg-success-subtle text-success border border-success-subtle';
-        let icono = 'fa-laptop';
-        if (mod.includes('diagn') || mod.includes('cpu')) {
-            badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
-            icono = 'fa-desktop';
+        let badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
+        let icono = 'fa-desktop';
+        let labelMod = 'Diagnóstico CPU';
+
+        if (mod.includes('porta') || mod.includes('laptop')) {
+            badgeClass = 'bg-success-subtle text-success border border-success-subtle';
+            icono = 'fa-laptop';
+            labelMod = 'Diagnóstico Portátiles';
         } else if (mod.includes('sopla') || mod.includes('limpie')) {
             badgeClass = 'bg-info-subtle text-info border border-info-subtle';
             icono = 'fa-wind';
+            labelMod = 'Soplado';
+        } else {
+            badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
+            icono = 'fa-desktop';
+            labelMod = 'Diagnóstico CPU';
         }
 
-        const moduloHtml = `<span class="badge ${badgeClass} fw-semibold px-2 py-1"><i class="fa-solid ${icono} me-1"></i>${escapeHtml(m.modulo_intervencion || 'Agregado al Sistema')}</span>`;
+        const moduloHtml = `<span class="badge ${badgeClass} fw-semibold px-2 py-1"><i class="fa-solid ${icono} me-1"></i>${escapeHtml(labelMod)}</span>`;
         const analista = m.analista_intervencion 
             ? `<div class="text-truncate text-dark small" style="max-width: 130px;" title="${escapeHtml(m.analista_intervencion)}"><i class="fa-solid fa-user-check text-muted me-1"></i>${escapeHtml(m.analista_intervencion)}</div>` 
             : '<span class="text-muted small">—</span>';

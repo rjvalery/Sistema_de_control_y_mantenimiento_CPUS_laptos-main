@@ -108,7 +108,7 @@ class Portatiles extends BaseController
         try {
             if ($this->portatilModel->insert($data)) {
                 // Sincronizar y descontar de pendientes en inventario general
-                $this->inventarioModel->marcarIntervenido($placaId, 'portatil', $nombreAnalista);
+                $this->inventarioModel->marcarIntervenido($placaId, 'Diagnóstico Portátiles', $nombreAnalista);
 
                 if ($isAjax) {
                     return $this->respondSuccess(['placa_id' => $placaId], 'Registro de diagnóstico guardado correctamente.');
@@ -199,7 +199,7 @@ class Portatiles extends BaseController
             }
 
             // Marcar también como intervenido en el inventario general
-            $this->inventarioModel->marcarIntervenido($placaId, 'portatil', $nombreAnalista);
+            $this->inventarioModel->marcarIntervenido($placaId, 'Diagnóstico Portátiles', $nombreAnalista);
 
             if ($isAjax) {
                 return $this->respondSuccess([

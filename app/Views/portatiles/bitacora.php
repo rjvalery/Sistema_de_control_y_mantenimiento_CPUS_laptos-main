@@ -146,7 +146,7 @@
     </div>
     <div class="card-footer bg-light py-2 px-4 d-flex flex-wrap justify-content-between align-items-center small text-muted">
         <span>Mostrando <strong><?= number_format($totalFiltrados ?? count($registros)) ?></strong> portátil(es) diagnosticada(s) <?= (!empty($busqueda) || !empty($fechaDesde) || !empty($fechaHasta)) ? '(filtradas de un total de ' . number_format($totalGeneral ?? count($registros)) . ')' : '' ?></span>
-        <span class="font-monospace">Bitácora Garantías Portátiles</span>
+        <span class="font-monospace">Bitácora Diagnóstico Portátiles</span>
     </div>
 </div>
 <?= $this->endSection() ?>
